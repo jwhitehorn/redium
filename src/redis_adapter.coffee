@@ -3,9 +3,8 @@ uuid  = require 'node-uuid'
 async = require 'async'
 
 class RedisAdapter
-  self = this
   constructor: (config, connection, opts) ->
-    self.client = redis.createClient()
+    @client = redis.createClient()
 
   isSql: false
 
@@ -20,7 +19,7 @@ class RedisAdapter
 
   #Closes your database connection.
   close: (callback) ->
-    self.client.end() if @client?
+    @client.end() if @client?
     callback() if callback?
 
 
@@ -38,7 +37,7 @@ class RedisAdapter
     #@client.on event, callback
 
   find: (fields, table, conditions, opts, callback) ->
-    console.log "-->", conditions
+    self = this
     idName = "id"
     idValue = conditions[idName]
     self.client.get "#{table}:#{idValue}", (err, json) ->
@@ -47,6 +46,7 @@ class RedisAdapter
       callback(err, data) if callback?
 
   insert: (table, data, id_prop, callback) ->
+    self = this
     idName = id_prop[0]["name"]
     idValue = data[idName]
     unless idValue?
@@ -58,9 +58,8 @@ class RedisAdapter
       return callback(err) if err? and callback?
 
       async.each Object.keys(data), (prop, next) ->
-        score = score data[prop]
+        score = self.score data[prop]
         self.client.zadd "#{table}:#{prop}", score, key, (err) ->
-          console.log "#{score} err->", err
           next err
       , (err) ->
         callback(err, idName: idValue) if callback?
