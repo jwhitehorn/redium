@@ -55,3 +55,13 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+  it 'should be able to fetch one record', (done) ->
+    db.open (err, models, close) ->
+      models.Order.one (err, order) ->
+        expect(err).to.not.exist
+        expect(order).to.exist
+        expect(order.shipping_address).to.exist
+
+        close()
+        done()
