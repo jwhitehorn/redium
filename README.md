@@ -2,6 +2,16 @@
 
 A Redis adapter for the [node-orm2](https://github.com/dresende/node-orm2) ORM.
 
+This is currently a work in progress, and is not yet intended to be used.
+
+## Usage
+
+Don't.
+
+## How it works
+
+It doesn't.
+
 ## License
 
 Copyright (c) 2014, [Jason Whitehorn](https://github.com/jwhitehorn)

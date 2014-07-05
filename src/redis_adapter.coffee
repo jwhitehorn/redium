@@ -37,22 +37,25 @@ class RedisAdapter
     #@client.on event, callback
 
   find: (fields, table, conditions, opts, callback) ->
+    return unless callback?
     self = this
     if Object.keys(conditions).length == 0
       self.client.keys "#{table}:id:*", (err, keys) ->
-        self.client.mget keys, (err, results) ->
-          async.map results, (json, next) ->
-            next null, JSON.parse json
-          , (err, results) ->
-            callback err, results if callback?
-      return
+        return callback(err) if err?
 
-    idName = "id"
-    idValue = conditions[idName]
-    self.client.get "#{table}:id:#{idValue}", (err, json) ->
-      data = []
-      data = [JSON.parse(json)] if json?
-      callback(err, data) if callback?
+        self.mgetKeys keys, callback
+    else if conditions["id"]?
+      idValue = conditions["id"]
+      self.client.get "#{table}:id:#{idValue}", (err, json) ->
+        data = []
+        data = [JSON.parse(json)] if json?
+        callback err, data
+    else
+      prop = Object.keys(conditions)[0]
+      value = conditions[prop]["val"]
+      score = self.score value
+      self.client.zrangebyscore "#{table}:#{prop}", score, "+inf", (err, keys) ->
+        self.mgetKeys keys, callback
 
   insert: (table, data, id_prop, callback) ->
     self = this
@@ -97,6 +100,16 @@ class RedisAdapter
       return value.getTime()
     console.log "[WARN] Unsupported object (#{value}) for scoring, returning 0"
     return 0
+
+  mgetKeys: (keys, callback) ->
+    self = this
+    self.client.mget keys, (err, results) ->
+      return callback(err) if err?
+
+      async.map results, (json, next) ->
+        next null, JSON.parse json
+      , (err, results) ->
+        callback err, results
 
 
 module.exports = RedisAdapter

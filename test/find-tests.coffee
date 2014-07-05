@@ -80,3 +80,6 @@ describe 'Redis adapter find', ->
 
         for order in orders
           order.total.should.be.at.least 40
+
+        close()
+        done()
