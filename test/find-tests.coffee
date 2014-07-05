@@ -83,3 +83,20 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+
+  it 'should find total less than 60', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.lt 60
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        for order in orders
+          order.total.should.be.less.than 60
+
+        close()
+        done()
