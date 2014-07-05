@@ -6,6 +6,10 @@ expect  = chai.expect
 
 describe 'Redis adapter inserts & basic finds', ->
 
+  beforeEach (done) ->
+    db.reset ->
+      done()
+
   it 'should open a connection without errors', (done) ->
     db.open (err, models, close) ->
       expect(err).to.not.exist

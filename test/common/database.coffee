@@ -1,5 +1,6 @@
-orm   = require 'orm'
-redis = require '../../src/redis_adapter.coffee'
+orm    = require 'orm'
+redis  = require '../../src/redis_adapter.coffee'
+client = require('redis').createClient()
 
 class Database
   @open: (callback) ->
@@ -7,7 +8,7 @@ class Database
 
     orm.connect 'redis://localhost:6380', (err, db)->
       return callback(err) if err?
-      
+
       order = db.define "orders",
                       shipping_address: String
                       total: Number
@@ -26,5 +27,9 @@ class Database
       callback null, models, ->
         db.close()
 
+  @reset: (callback) ->
+    client.keys "*", (err, allKeys) ->
+      client.del allKeys, (err) ->
+        callback err
 
 module.exports = Database
