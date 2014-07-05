@@ -1,6 +1,7 @@
 db      = require './common/database.coffee'
 chai    = require 'chai'
 async   = require 'async'
+orm     = require 'orm'
 should  = chai.should()
 expect  = chai.expect
 
@@ -65,3 +66,17 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+
+  it 'should find total greater than 40', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.gt 40
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        for order in orders
+          order.total.should.be.at.least 40
