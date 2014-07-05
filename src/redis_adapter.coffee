@@ -38,9 +38,18 @@ class RedisAdapter
 
   find: (fields, table, conditions, opts, callback) ->
     self = this
+    if Object.keys(conditions).length == 0
+      self.client.keys "#{table}:id:*", (err, keys) ->
+        self.client.mget keys, (err, results) ->
+          async.map results, (json, next) ->
+            next null, JSON.parse json
+          , (err, results) ->
+            callback err, results if callback?
+      return
+
     idName = "id"
     idValue = conditions[idName]
-    self.client.get "#{table}:#{idValue}", (err, json) ->
+    self.client.get "#{table}:id:#{idValue}", (err, json) ->
       data = []
       data = [JSON.parse(json)] if json?
       callback(err, data) if callback?
@@ -53,7 +62,7 @@ class RedisAdapter
       idValue = uuid.v4()
       data[idName] = idValue
 
-    key = "#{table}:#{idValue}"
+    key = "#{table}:id:#{idValue}"
     self.client.set key, JSON.stringify(data), (err) ->
       return callback(err) if err? and callback?
 
