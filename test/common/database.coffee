@@ -9,6 +9,7 @@ class Database
     orm.connect 'redis://localhost:6380', (err, db)->
       return callback(err) if err?
 
+      db.settings.set 'instance.cache', false
       order = db.define "orders",
                       shipping_address: String
                       total: Number
