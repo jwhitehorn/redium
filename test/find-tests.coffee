@@ -226,3 +226,21 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+
+  it 'should find total greater than or equal to 45.95 before the 15th', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.gte 45.95
+        order_date: orm.lt new Date Date.parse "2014-01-15T00:00:00Z"
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 1
+
+        for order in orders
+          order.total.should.be.at.least 45.95
+
+        close()
+        done()

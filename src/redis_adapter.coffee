@@ -52,10 +52,15 @@ class RedisAdapter
         data = [JSON.parse(json)] if json?
         callback err, data
     else
-      prop = Object.keys(conditions)[0]
-      self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
-        self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
-          self.mgetKeys keys, callback
+      async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
+        self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
+          self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
+            if existingKeys?
+              next err, _.intersection existingKeys, keys
+            else
+              next err, keys
+      , (err, keys) ->
+        self.mgetKeys keys, callback
 
   insert: (table, data, id_prop, callback) ->
     self = this
