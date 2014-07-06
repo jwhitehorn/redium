@@ -18,8 +18,8 @@ It doesn't.
   * _string equality is defined by `crc32`, [so YMMV on equality](http://stackoverflow.com/questions/14210298/probability-of-collision-crc32)_
 * not-equals (`orm.ne`) is currently not supported.
 * Each model has to have an id, it has to be called `id`, and it'll be assign as a GUID (unless already assigned).
-  * _finding based on `id` is not subject to the same disclaimer about strings_
-  
+  * _`id` equality is __not__ constrained by `crc32`_
+
 ## License
 
 Copyright (c) 2014, [Jason Whitehorn](https://github.com/jwhitehorn)
