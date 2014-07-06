@@ -66,8 +66,12 @@ class RedisAdapter
       lowerScore = "-inf"
       upperScore = "+inf"
       if comparator == "lt"
+        upperScore = self.score(value) - 1
+      else if comparator == "lte"
         upperScore = self.score value
       else if comparator == "gt"
+        lowerScore = self.score(value) + 1
+      else if comparator == "gte"
         lowerScore = self.score value
       else
         lowerScore = self.score value
