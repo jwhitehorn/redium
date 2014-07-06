@@ -54,8 +54,14 @@ class RedisAdapter
       console.log "opts -->", opts
       console.log "conditions -->", conditions
       prop = Object.keys(conditions)[0]
-      value = conditions[prop]["val"]
-      comparator = conditions[prop].sql_comparator()
+      value = null
+      comparator = "eq"
+      if typeof conditions[prop] == "number"
+        value = conditions[prop]
+      else
+        comparator = conditions[prop].sql_comparator()
+        value = conditions[prop]["val"]
+
       console.log "comparator -->", comparator
       lowerScore = "-inf"
       upperScore = "+inf"
