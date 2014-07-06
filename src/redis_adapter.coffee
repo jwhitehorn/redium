@@ -51,33 +51,10 @@ class RedisAdapter
         data = [JSON.parse(json)] if json?
         callback err, data
     else
-      console.log "opts -->", opts
-      console.log "conditions -->", conditions
       prop = Object.keys(conditions)[0]
-      value = null
-      comparator = "eq"
-      if typeof conditions[prop] == "number"
-        value = conditions[prop]
-      else
-        comparator = conditions[prop].sql_comparator()
-        value = conditions[prop]["val"]
-
-      console.log "comparator -->", comparator
-      lowerScore = "-inf"
-      upperScore = "+inf"
-      if comparator == "lt"
-        upperScore = self.score(value) - 1
-      else if comparator == "lte"
-        upperScore = self.score value
-      else if comparator == "gt"
-        lowerScore = self.score(value) + 1
-      else if comparator == "gte"
-        lowerScore = self.score value
-      else
-        lowerScore = self.score value
-        upperScore = lowerScore
-      self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
-        self.mgetKeys keys, callback
+      self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
+        self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
+          self.mgetKeys keys, callback
 
   insert: (table, data, id_prop, callback) ->
     self = this
@@ -120,7 +97,6 @@ class RedisAdapter
       return value
     if value instanceof Date
       return value.getTime()
-    console.log "[WARN] Unsupported object (#{value}) for scoring, returning 0"
     return 0
 
   mgetKeys: (keys, callback) ->
@@ -133,5 +109,30 @@ class RedisAdapter
       , (err, results) ->
         callback err, results
 
+  scoreRange: (prop, conditions, callback) ->
+    value = null
+    self = this
+    comparator = "eq"
+    if typeof conditions[prop] == "number"
+      value = conditions[prop]
+    else
+      comparator = conditions[prop].sql_comparator()
+      value = conditions[prop]["val"]
+
+    lowerScore = "-inf"
+    upperScore = "+inf"
+    if comparator == "lt"
+      upperScore = self.score(value) - 1
+    else if comparator == "lte"
+      upperScore = self.score value
+    else if comparator == "gt"
+      lowerScore = self.score(value) + 1
+    else if comparator == "gte"
+      lowerScore = self.score value
+    else
+      lowerScore = self.score value
+      upperScore = lowerScore
+
+    callback null, lowerScore, upperScore
 
 module.exports = RedisAdapter
