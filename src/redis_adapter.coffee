@@ -1,6 +1,7 @@
 redis = require 'redis'
 uuid  = require 'node-uuid'
 async = require 'async'
+crc   = require 'crc'
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
@@ -97,6 +98,9 @@ class RedisAdapter
       return value
     if value instanceof Date
       return value.getTime()
+    if typeof value == "string"
+      score = parseInt crc.crc32(value), 16
+      return score
     return 0
 
   mgetKeys: (keys, callback) ->
@@ -113,11 +117,11 @@ class RedisAdapter
     value = null
     self = this
     comparator = "eq"
-    if typeof conditions[prop] == "number"
-      value = conditions[prop]
-    else
+    if conditions[prop].sql_comparator?
       comparator = conditions[prop].sql_comparator()
       value = conditions[prop]["val"]
+    else
+      value = conditions[prop]
 
     lowerScore = "-inf"
     upperScore = "+inf"
