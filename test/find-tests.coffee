@@ -244,3 +244,54 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+
+  it 'should find total greater than or equal to 45.95 after the 15th', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.gte 45.95
+        order_date: orm.gt new Date Date.parse "2014-01-15T00:00:00Z"
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 1
+
+        for order in orders
+          order.total.should.be.at.least 45.95
+
+        close()
+        done()
+
+
+  it 'should be able to find by boolean (false)', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        sent_to_fullment: false
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 1
+
+        orders[0].sent_to_fullment.should.equal false
+
+        close()
+        done()
+
+
+  it 'should be able to find by boolean (true)', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        sent_to_fullment: true
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        for order in orders
+          order.sent_to_fullment.should.equal true
+
+        close()
+        done()

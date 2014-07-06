@@ -76,7 +76,7 @@ class RedisAdapter
 
       async.each Object.keys(data), (prop, next) ->
         return next() if prop == "id" #no need to index this
-        
+
         score = self.score data[prop]
         self.client.zadd "#{table}:#{prop}", score, key, (err) ->
           next err
@@ -108,6 +108,9 @@ class RedisAdapter
     if typeof value == "string"
       score = parseInt crc.crc32(value), 16
       return score
+    if typeof value == "boolean"
+      return 1 if value == true
+      return 0 if value == false
     return 0
 
   mgetKeys: (keys, callback) ->
