@@ -2,6 +2,7 @@ db      = require './common/database.coffee'
 chai    = require 'chai'
 async   = require 'async'
 orm     = require 'orm'
+crc     = require 'crc'
 should  = chai.should()
 expect  = chai.expect
 
@@ -293,5 +294,35 @@ describe 'Redis adapter find', ->
         for order in orders
           order.sent_to_fullment.should.equal true
 
+        close()
+        done()
+
+  it 'should not get confused by two strings with the same crc32', (done) ->
+    crc.crc32("slagging").should.equal crc.crc32("Bridget")  #double check this before we get too far
+    db.open (err, models, close) ->
+      async.series [
+        (next) ->
+          order =
+            shipping_address: "slagging"
+
+          models.Order.create order, (err) ->
+            next err
+
+        (next) ->
+          order =
+            shipping_address: "Bridget"
+
+          models.Order.create order, (err) ->
+            next err
+
+        (next) ->
+          models.Order.find shipping_address: "Bridget", (err, orders) ->
+            expect(err).to.not.exist
+            expect(orders).to.exist
+            orders.length.should.equal 1
+            orders[0].shipping_address.should.equal "Bridget"
+            next err
+
+      ], (err) ->
         close()
         done()

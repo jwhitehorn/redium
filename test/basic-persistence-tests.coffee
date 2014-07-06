@@ -4,7 +4,7 @@ should  = chai.should()
 expect  = chai.expect
 
 
-describe 'Redis adapter inserts & basic finds', ->
+describe 'Redis adapter basics', ->
 
   beforeEach (done) ->
     db.reset ->
