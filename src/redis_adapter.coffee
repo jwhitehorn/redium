@@ -51,10 +51,22 @@ class RedisAdapter
         data = [JSON.parse(json)] if json?
         callback err, data
     else
+      console.log "opts -->", opts
+      console.log "conditions -->", conditions
       prop = Object.keys(conditions)[0]
       value = conditions[prop]["val"]
-      score = self.score value
-      self.client.zrangebyscore "#{table}:#{prop}", score, "+inf", (err, keys) ->
+      comparator = conditions[prop].sql_comparator()
+      console.log "comparator -->", comparator
+      lowerScore = "-inf"
+      upperScore = "+inf"
+      if comparator == "lt"
+        upperScore = self.score value
+      else if comparator == "gt"
+        lowerScore = self.score value
+      else
+        lowerScore = self.score value
+        upperScore = lowerScore
+      self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
         self.mgetKeys keys, callback
 
   insert: (table, data, id_prop, callback) ->

@@ -96,7 +96,7 @@ describe 'Redis adapter find', ->
         orders.length.should.equal 2
 
         for order in orders
-          order.total.should.be.less.than 60
+          order.total.should.be.below 60
 
         close()
         done()
