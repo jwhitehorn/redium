@@ -100,3 +100,33 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+
+  it 'should find total equal to 45.95', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.eq 45.95
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 1
+        orders[0].total.should.equal 45.95
+
+        close()
+        done()
+
+
+  it 'should find total equal to 45.95 (without comparator)', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: 45.95
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 1
+        orders[0].total.should.equal 45.95
+
+        close()
+        done()
