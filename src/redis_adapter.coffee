@@ -75,6 +75,8 @@ class RedisAdapter
       return callback(err) if err? and callback?
 
       async.each Object.keys(data), (prop, next) ->
+        return next() if prop == "id" #no need to index this
+        
         score = self.score data[prop]
         self.client.zadd "#{table}:#{prop}", score, key, (err) ->
           next err
