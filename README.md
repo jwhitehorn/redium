@@ -15,10 +15,8 @@ It doesn't.
 ## Known Limitations
 
 * When querying with a `String` property, only equalities are supported.
-  * _string equality is defined by `crc32`, [so YMMV on equality](http://stackoverflow.com/questions/14210298/probability-of-collision-crc32)_
 * not-equals (`orm.ne`) is currently not supported.
 * Each model has to have an id, it has to be called `id`, and it'll be assign as a GUID (unless already assigned).
-  * _`id` equality is not constrained by `crc32`_
 
 ## License
 

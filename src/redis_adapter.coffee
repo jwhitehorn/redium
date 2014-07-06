@@ -60,7 +60,9 @@ class RedisAdapter
             else
               next err, keys
       , (err, keys) ->
-        self.mgetKeys keys, callback
+        self.mgetKeys keys, (err, results) ->
+          return callback(err) if err?
+          self.recheckConditionals results, conditions, callback
 
   insert: (table, data, id_prop, callback) ->
     self = this
@@ -148,5 +150,26 @@ class RedisAdapter
       upperScore = lowerScore
 
     callback null, lowerScore, upperScore
+
+
+  recheckConditionals: (results, conditions, callback) ->
+    self = this
+    async.filter results, (result, next) ->
+      keep = true
+      for prop in Object.keys(conditions)
+        value = null
+        if conditions[prop].sql_comparator?
+          value = conditions[prop]["val"]
+        else
+          value = conditions[prop]
+
+        if typeof value == "string"
+          if result[prop] != value
+            keep = false
+            break
+
+      next keep
+    , (results) ->
+      callback null, results
 
 module.exports = RedisAdapter
