@@ -209,3 +209,20 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+
+  it 'should find by address', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        shipping_address: orm.ne "100 Main Street"
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        for order in orders
+          order.shipping_address.should.not.equal "100 Main Street"
+
+        close()
+        done()
