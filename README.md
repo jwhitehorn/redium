@@ -19,6 +19,7 @@ It doesn't.
 * not-equals (`orm.ne`) is currently not supported.
 * Each model has to have an id, it has to be called `id`, and it'll be assign as a GUID (unless already assigned).
   * _finding based on `id` is not subject to the same disclaimer about strings_
+  
 ## License
 
 Copyright (c) 2014, [Jason Whitehorn](https://github.com/jwhitehorn)
