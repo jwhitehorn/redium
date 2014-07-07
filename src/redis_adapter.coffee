@@ -53,10 +53,6 @@ class RedisAdapter
         self.mgetKeys keys, callback
     else if conditions["id"]?
       idValue = conditions["id"]
-      #self.client.get "#{table}:id:#{idValue}", (err, json) ->
-      #  data = []
-      #  data = [JSON.parse(json)] if json?
-      #  callback err, data
       self.client.hgetall "#{table}:id:#{idValue}", callback
     else
       async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
@@ -80,7 +76,6 @@ class RedisAdapter
       data[idName] = idValue
 
     key = "#{table}:id:#{idValue}"
-    #self.client.set key, JSON.stringify(data), (err) ->
     self.client.hmset key, data, (err) ->
       return callback(err) if err? and callback?
 
