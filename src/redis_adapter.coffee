@@ -93,10 +93,13 @@ class RedisAdapter
     self = this
     callback = self.blank unless callback?
     id = conditions["id"]
-
-    console.log "-->", changes
-    console.log "==>", id
-    callback()
+    multi = self.client.multi()
+    async.each Object.keys(changes), (prop, next) ->
+      multi.hset "#{table}:id:#{id}", prop, changes[prop]
+      next()
+    , ->
+      multi.exec (err) ->
+        callback err
 
   remove: (table, conditions, callback) ->
     callback() if callback?
