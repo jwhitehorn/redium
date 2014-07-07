@@ -212,7 +212,7 @@ describe 'Redis adapter find', ->
         done()
 
 
-  it 'should find by address', (done) ->
+  it 'should find by address (ne)', (done) ->
     db.open (err, models, close) ->
       filter =
         shipping_address: orm.ne "100 Main Street"

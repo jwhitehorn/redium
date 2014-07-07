@@ -6,6 +6,8 @@ crc   = require 'crc'
 class RedisAdapter
   constructor: (config, connection, opts) ->
     @client = redis.createClient()
+    @blank = ->
+      return
 
   isSql: false
 
@@ -31,6 +33,10 @@ class RedisAdapter
 
   #Maps a database value to the property value to use for the mapped object.
   valueToProperty: (value, property) ->
+    if property["type"] == "number"
+      return parseFloat value
+    if property["type"] == "boolean"
+      return value == 'true' || value == '1' || value == 1 || value == true
     return value
 
   on: (event, callback) ->
@@ -47,10 +53,11 @@ class RedisAdapter
         self.mgetKeys keys, callback
     else if conditions["id"]?
       idValue = conditions["id"]
-      self.client.get "#{table}:id:#{idValue}", (err, json) ->
-        data = []
-        data = [JSON.parse(json)] if json?
-        callback err, data
+      #self.client.get "#{table}:id:#{idValue}", (err, json) ->
+      #  data = []
+      #  data = [JSON.parse(json)] if json?
+      #  callback err, data
+      self.client.hgetall "#{table}:id:#{idValue}", callback
     else
       async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
@@ -73,7 +80,8 @@ class RedisAdapter
       data[idName] = idValue
 
     key = "#{table}:id:#{idValue}"
-    self.client.set key, JSON.stringify(data), (err) ->
+    #self.client.set key, JSON.stringify(data), (err) ->
+    self.client.hmset key, data, (err) ->
       return callback(err) if err? and callback?
 
       async.each Object.keys(data), (prop, next) ->
@@ -86,7 +94,13 @@ class RedisAdapter
         callback(err, idName: idValue) if callback?
 
   update: (table, changes, conditions, callback) ->
-    callback() if callback?
+    self = this
+    callback = self.blank unless callback?
+    id = conditions["id"]
+
+    console.log "-->", changes
+    console.log "==>", id
+    callback()
 
   remove: (table, conditions, callback) ->
     callback() if callback?
@@ -117,13 +131,10 @@ class RedisAdapter
 
   mgetKeys: (keys, callback) ->
     self = this
-    self.client.mget keys, (err, results) ->
-      return callback(err) if err?
-
-      async.map results, (json, next) ->
-        next null, JSON.parse json
-      , (err, results) ->
-        callback err, results
+    async.map keys, (key, next) ->
+      self.client.hgetall key, next
+    , (err, results) ->
+      callback err, results
 
   scoreRange: (prop, conditions, callback) ->
     value = null
