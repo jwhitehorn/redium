@@ -5,6 +5,10 @@
   "author": "Jason Whitehorn",
   "license": "BSD",
   "homepage": "https://github.com/jwhitehorn/node-orm2-redis",
+  "scripts": {
+    "build":        "coffee --bare --compile --output lib/ src/*.coffee",
+    "prepublish":   "coffee --bare --compile --output lib/ src/*.coffee"
+  },
   "dependencies": {
     "orm": "~2.1.15",
     "node-uuid": "~1.4.1",
