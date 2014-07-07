@@ -70,3 +70,44 @@ describe 'Redis adapter find', ->
 
             close()
             done()
+
+  it 'should update indexes too', (done) ->
+    db.open (err, models, close) ->
+      async.series [
+        (next) ->
+          models.Order.one (err, order) ->
+            order.total = 99
+
+            order.save next
+
+        (next) ->
+          models.Order.find total: 99, (err, orders) ->
+            expect(err).to.not.exist
+            expect(orders).to.exist
+            orders.length.should.equal 1
+
+            next err
+      ], ->
+        close()
+        done()
+
+
+  it 'should remove old index', (done) ->
+    db.open (err, models, close) ->
+      async.series [
+        (next) ->
+          models.Order.one total: 45.95, (err, order) ->
+            order.total = 99
+
+            order.save next
+
+        (next) ->
+          models.Order.find total: 45.95, (err, orders) ->
+            expect(err).to.not.exist
+            expect(orders).to.exist
+            orders.length.should.equal 0
+
+            next err
+      ], ->
+        close()
+        done()

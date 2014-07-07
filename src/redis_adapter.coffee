@@ -94,8 +94,11 @@ class RedisAdapter
     callback = self.blank unless callback?
     id = conditions["id"]
     multi = self.client.multi()
+    key = "#{table}:id:#{id}"
     async.each Object.keys(changes), (prop, next) ->
-      multi.hset "#{table}:id:#{id}", prop, changes[prop]
+      multi.hset key, prop, changes[prop]
+      score = self.score changes[prop]
+      multi.zadd "#{table}:#{prop}", score, key
       next()
     , ->
       multi.exec (err) ->
