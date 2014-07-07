@@ -53,7 +53,8 @@ class RedisAdapter
         self.mgetKeys keys, callback
     else if conditions["id"]?
       idValue = conditions["id"]
-      self.client.hgetall "#{table}:id:#{idValue}", callback
+      self.client.hgetall "#{table}:id:#{idValue}", (err, object) ->
+        callback err, [object]
     else
       async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
