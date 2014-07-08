@@ -84,6 +84,7 @@ class RedisAdapter
         return next() if prop == "id" #no need to index this
 
         score = self.score data[prop]
+        return next() unless score?
         self.client.zadd "#{table}:#{prop}", score, key, (err) ->
           next err
       , (err) ->
@@ -119,6 +120,8 @@ class RedisAdapter
     callback() if callback?
 
   score: (value) ->
+    if value == NaN
+      return null
     if typeof value == "number"
       return value
     if value instanceof Date

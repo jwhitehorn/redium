@@ -32,3 +32,15 @@ describe 'Redis adapter basics', ->
 
         close()
         done()
+
+  it 'should save a model with missing data', (done) ->
+    db.open (err, models, close) ->
+      order =
+        shipping_address: "100 Main St."
+
+      models.Order.create order, (err, order) ->
+        expect(err).to.not.exist
+        expect(order.id).to.exist
+
+        close()
+        done()
