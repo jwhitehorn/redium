@@ -39,6 +39,7 @@ describe 'Redis adapter basics', ->
         shipping_address: "100 Main St."
 
       models.Order.create order, (err, order) ->
+        console.log "-->", err.stack if err?
         expect(err).to.not.exist
         expect(order.id).to.exist
 

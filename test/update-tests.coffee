@@ -111,3 +111,24 @@ describe 'Redis adapter find', ->
       ], ->
         close()
         done()
+
+
+  it 'should remove old index when property goes to null', (done) ->
+    db.open (err, models, close) ->
+      async.series [
+        (next) ->
+          models.Order.one total: 45.95, (err, order) ->
+            order.total = null
+
+            order.save next
+
+        (next) ->
+          models.Order.find total: 45.95, (err, orders) ->
+            expect(err).to.not.exist
+            expect(orders).to.exist
+            orders.length.should.equal 0
+
+            next err
+      ], ->
+        close()
+        done()
