@@ -46,27 +46,14 @@ class RedisAdapter
   find: (fields, table, conditions, opts, callback) ->
     return unless callback?
     self = this
-    if Object.keys(conditions).length == 0
-      self.client.keys "#{table}:id:*", (err, keys) ->
-        return callback(err) if err?
 
-        self.mgetKeys keys, callback
-    else if conditions["id"]?
-      idValue = conditions["id"]
-      self.client.hgetall "#{table}:id:#{idValue}", (err, object) ->
-        callback err, [object]
-    else
-      async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
-        self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
-          self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
-            if existingKeys?
-              next err, _.intersection existingKeys, keys
-            else
-              next err, keys
-      , (err, keys) ->
-        self.mgetKeys keys, (err, results) ->
-          return callback(err) if err?
-          self.recheckConditionals results, conditions, callback
+    self.keysFor table, conditions, (err, keys) ->
+      return callback(err) if err?
+
+      self.mgetKeys keys, (err, results) ->
+        return callback(err) if err?
+        self.recheckConditionals results, conditions, callback
+
 
   insert: (table, data, id_prop, callback) ->
     self = this
@@ -165,6 +152,25 @@ class RedisAdapter
       upperScore = lowerScore
 
     callback null, lowerScore, upperScore
+
+
+  keysFor: (table, conditions, callback) ->
+    self = this
+    if Object.keys(conditions).length == 0
+      self.client.keys "#{table}:id:*", (err, keys) ->
+        callback err, keys
+    else if conditions["id"]?
+      idValue = conditions["id"]
+      callback null, ["#{table}:id:#{idValue}"]
+    else
+      async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
+        self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
+          self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
+            if existingKeys?
+              next err, _.intersection existingKeys, keys
+            else
+              next err, keys
+      , callback
 
 
   recheckConditionals: (results, conditions, callback) ->
