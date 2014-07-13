@@ -95,7 +95,13 @@ class RedisAdapter
     callback() if callback?
 
   count: (table, conditions, opts, callback) ->
-    callback(null, []) if callback?
+    callback(null, []) unless callback?
+    self = this
+
+    self.keysFor table, conditions, (err, keys) ->
+      return callback(err) if err?
+
+      callback(err, [c:keys.length])
 
   clear: (table, callback) ->
     callback() if callback?
@@ -156,7 +162,7 @@ class RedisAdapter
 
   keysFor: (table, conditions, callback) ->
     self = this
-    if Object.keys(conditions).length == 0
+    if conditions == null or Object.keys(conditions).length == 0
       self.client.keys "#{table}:id:*", (err, keys) ->
         callback err, keys
     else if conditions["id"]?
