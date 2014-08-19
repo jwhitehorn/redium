@@ -104,9 +104,11 @@ class RedisAdapter
       callback(err, [c:keys.length])
 
   clear: (table, callback) ->
-    callback() if callback?
-    ##@client.del "#{table}:*", (err) ->
-    ##  callback err
+    self = this
+    @client.keys "#{table}:*", (err, keys) ->
+      return callback(err) if callback? and (err? or keys == null or keys.length == 0)
+      self.client.del keys, (err) ->
+        callback(err) if callback?
 
   eagerQuery: (association, opts, ids, callback) ->
     callback() if callback?
