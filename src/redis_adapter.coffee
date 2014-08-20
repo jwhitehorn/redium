@@ -9,7 +9,7 @@ class RedisAdapter
     @blank = ->
       return
 
-  isSql: false
+  isSql: true #hack to allow Enforce validations
 
   #Establishes your database connection.
   connect: (callback) ->
@@ -40,6 +40,8 @@ class RedisAdapter
     if property["type"] == "text"
       if value == 'null'
         return null
+    if property["type"] == "date"
+      return new Date Date.parse value
     return value
 
   on: (event, callback) ->
