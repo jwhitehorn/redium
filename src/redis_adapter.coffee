@@ -37,6 +37,9 @@ class RedisAdapter
       return parseFloat value
     if property["type"] == "boolean"
       return value == 'true' || value == '1' || value == 1 || value == true
+    if property["type"] == "text"
+      if value == 'null'
+        return null
     return value
 
   on: (event, callback) ->
@@ -183,8 +186,10 @@ class RedisAdapter
 
   recheckConditionals: (results, conditions, callback) ->
     self = this
+    results = [] unless results?
     async.filter results, (result, next) ->
       keep = true
+      return next(false) unless result?
       for prop in Object.keys(conditions)
         value = null
         if conditions[prop].sql_comparator?
