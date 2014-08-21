@@ -326,3 +326,16 @@ describe 'Redis adapter find', ->
       ], (err) ->
         close()
         done()
+
+  it 'should find orders between date range', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        order_date: orm.between new Date(Date.parse "2014-01-09T04:30:00Z"), new Date(Date.parse "2014-01-13T04:30:00Z")
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        close()
+        done()

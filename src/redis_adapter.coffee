@@ -160,6 +160,9 @@ class RedisAdapter
       lowerScore = self.score(value) + 1
     else if comparator == "gte"
       lowerScore = self.score value
+    else if comparator == "between"
+      lowerScore = self.score(conditions[prop]["from"])
+      upperScore = self.score(conditions[prop]["to"])
     else
       lowerScore = self.score value
       upperScore = lowerScore
