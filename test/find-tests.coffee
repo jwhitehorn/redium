@@ -339,3 +339,16 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+  it 'should be able to find with an in clause', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: [45.95, 35.95]
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        close()
+        done()

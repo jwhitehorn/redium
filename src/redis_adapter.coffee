@@ -164,6 +164,12 @@ class RedisAdapter
       lowerScore = self.score(conditions[prop]["from"])
       upperScore = self.score(conditions[prop]["to"])
     else
+      if value.length? and typeof value is 'object'
+        scores = []
+        for v in value
+          scores.push self.score v
+        return callback null, scores, null
+
       lowerScore = self.score value
       upperScore = lowerScore
 
@@ -181,11 +187,17 @@ class RedisAdapter
     else
       async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
-          self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
-            if existingKeys?
-              next err, _.intersection existingKeys, keys
-            else
-              next err, keys
+          if lowerScore.length? and typeof lowerScore is 'object'
+            async.reduce lowerScore, [], (unionKeys, score, next) ->
+              self.client.zrangebyscore "#{table}:#{prop}", score, score, (err, keys) ->
+                next err, _.union unionKeys, keys
+            , next
+          else
+            self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
+              if existingKeys?
+                next err, _.intersection existingKeys, keys
+              else
+                next err, keys
       , callback
 
 
