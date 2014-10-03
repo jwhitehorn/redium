@@ -41,6 +41,7 @@ class RedisAdapter
       if value == 'null'
         return null
     if property["type"] == "date"
+      return null unless value?
       return new Date Date.parse value
     return value
 
