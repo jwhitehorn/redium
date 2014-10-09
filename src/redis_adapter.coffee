@@ -53,7 +53,7 @@ class RedisAdapter
     return unless callback?
     self = this
 
-    self.keysFor table, conditions, (err, keys) ->
+    self.keysFor table, conditions, opts, (err, keys) ->
       return callback(err) if err?
 
       self.mgetKeys keys, (err, results) ->
@@ -74,8 +74,6 @@ class RedisAdapter
       return callback(err) if err? and callback?
 
       async.each Object.keys(data), (prop, next) ->
-        return next() if prop == "id" #no need to index this
-
         score = self.score data[prop]
         self.client.zadd "#{table}:#{prop}", score, key, (err) ->
           next err
@@ -104,7 +102,7 @@ class RedisAdapter
     callback(null, []) unless callback?
     self = this
 
-    self.keysFor table, conditions, (err, keys) ->
+    self.keysFor table, conditions, opts, (err, keys) ->
       return callback(err) if err?
 
       callback(err, [c:keys.length])
@@ -177,10 +175,11 @@ class RedisAdapter
     callback null, lowerScore, upperScore
 
 
-  keysFor: (table, conditions, callback) ->
+  keysFor: (table, conditions, opts, callback) ->
+    limit = opts.limit if typeof opts.limit == "number"
     self = this
     if conditions == null or Object.keys(conditions).length == 0
-      self.client.keys "#{table}:id:*", (err, keys) ->
+      self.performZRangeByScore "#{table}:id", "-inf", "inf", limit, (err, keys) ->
         callback err, keys
     else if conditions["id"]?
       idValue = conditions["id"]
@@ -190,16 +189,29 @@ class RedisAdapter
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
           if lowerScore.length? and typeof lowerScore is 'object'
             async.reduce lowerScore, [], (unionKeys, score, next) ->
-              self.client.zrangebyscore "#{table}:#{prop}", score, score, (err, keys) ->
+              self.performZRangeByScore "#{table}:#{prop}", score, score, limit, (err, keys) ->
                 next err, _.union unionKeys, keys
             , next
           else
-            self.client.zrangebyscore "#{table}:#{prop}", lowerScore, upperScore, (err, keys) ->
+            self.performZRangeByScore "#{table}:#{prop}", lowerScore, upperScore, limit, (err, keys) ->
               if existingKeys?
                 next err, _.intersection existingKeys, keys
               else
                 next err, keys
-      , callback
+      , (err, keys) ->
+        keys = keys.slice 0, limit if limit? #holy cow, this is busted!
+        callback err, keys
+
+
+  performZRangeByScore: (key, min, max, limit, callback) ->
+    args = [key, min, max]
+    if limit? or offset?
+      args.push "LIMIT"
+      args.push offset if offset?
+      args.push 0 unless offset?
+      args.push limit if limit?
+    args.push callback
+    @client.zrangebyscore.apply @client, args
 
 
   recheckConditionals: (results, conditions, callback) ->
