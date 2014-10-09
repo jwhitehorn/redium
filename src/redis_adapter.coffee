@@ -177,9 +177,10 @@ class RedisAdapter
 
   keysFor: (table, conditions, opts, callback) ->
     limit = opts.limit if typeof opts.limit == "number"
+    offset = opts.offset if typeof opts.offset == "number"
     self = this
     if conditions == null or Object.keys(conditions).length == 0
-      self.performZRangeByScore "#{table}:id", "-inf", "inf", limit, (err, keys) ->
+      self.performZRangeByScore "#{table}:id", "-inf", "inf", limit, offset, (err, keys) ->
         callback err, keys
     else if conditions["id"]?
       idValue = conditions["id"]
@@ -189,11 +190,11 @@ class RedisAdapter
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
           if lowerScore.length? and typeof lowerScore is 'object'
             async.reduce lowerScore, [], (unionKeys, score, next) ->
-              self.performZRangeByScore "#{table}:#{prop}", score, score, limit, (err, keys) ->
+              self.performZRangeByScore "#{table}:#{prop}", score, score, limit, offset, (err, keys) ->
                 next err, _.union unionKeys, keys
             , next
           else
-            self.performZRangeByScore "#{table}:#{prop}", lowerScore, upperScore, limit, (err, keys) ->
+            self.performZRangeByScore "#{table}:#{prop}", lowerScore, upperScore, limit, offset, (err, keys) ->
               if existingKeys?
                 next err, _.intersection existingKeys, keys
               else
@@ -203,7 +204,7 @@ class RedisAdapter
         callback err, keys
 
 
-  performZRangeByScore: (key, min, max, limit, callback) ->
+  performZRangeByScore: (key, min, max, limit, offset, callback) ->
     args = [key, min, max]
     if limit? or offset?
       args.push "LIMIT"

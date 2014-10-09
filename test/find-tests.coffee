@@ -391,3 +391,57 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+  it 'should be able to use offset & limit the results', (done) ->
+    db.open (err, models, close) ->
+
+      models.Order.find().limit(2).run (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        models.Order.find().limit(2).offset(2).run (err, moreOrders) ->
+          expect(err).to.not.exist
+          expect(moreOrders).to.exist
+          moreOrders.length.should.equal 1
+
+          close()
+          done()
+
+  it 'should be able to use offset & limit the results of filtered queries', (done) ->
+    db.open (err, models, close) ->
+
+      filter =
+        total: orm.gt 0
+
+      models.Order.find(filter).limit(2).run (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        models.Order.find(filter).limit(2).offset(2).run (err, moreOrders) ->
+          expect(err).to.not.exist
+          expect(moreOrders).to.exist
+          moreOrders.length.should.equal 1
+
+          close()
+          done()
+
+  it 'should be able to use offset & limit the results, even with in-clauses', (done) ->
+    db.open (err, models, close) ->
+
+      filter =
+        total: [45.95, 35.95, 135.95]
+
+      models.Order.find(filter).limit(2).run (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 2
+
+        models.Order.find(filter).limit(2).offset(2).run (err, moreOrders) ->
+          expect(err).to.not.exist
+          expect(moreOrders).to.exist
+          moreOrders.length.should.equal 1
+
+          close()
+          done()
