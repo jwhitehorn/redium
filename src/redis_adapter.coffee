@@ -2,6 +2,7 @@ redis = require 'redis'
 uuid  = require 'node-uuid'
 async = require 'async'
 crc   = require 'crc'
+fs    = require 'fs'
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
@@ -13,7 +14,14 @@ class RedisAdapter
 
   #Establishes your database connection.
   connect: (callback) ->
-    callback() if callback?
+    self = this
+    fs.readFile './src/keys_for.lua', 'utf8', (err, lua) ->
+      return callback?(err) if err?
+
+      self.client.script 'load', lua, (err, sha) ->
+        self.keysForSha = sha
+
+        callback(err) if callback?
 
   #Tests whether your connection is still alive.
   ping: (callback) ->
@@ -186,22 +194,21 @@ class RedisAdapter
       idValue = conditions["id"]
       callback null, ["#{table}:id:#{idValue}"]
     else
-      async.reduce Object.keys(conditions), null, (existingKeys, prop, next) ->
+      async.map Object.keys(conditions), (prop, next) ->
+        #first, let's convert node-orm's conditions from a hash, to an array with redis scores
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
-          if lowerScore.length? and typeof lowerScore is 'object'
-            async.reduce lowerScore, [], (unionKeys, score, next) ->
-              self.performZRangeByScore "#{table}:#{prop}", score, score, limit, offset, (err, keys) ->
-                next err, _.union unionKeys, keys
-            , next
-          else
-            self.performZRangeByScore "#{table}:#{prop}", lowerScore, upperScore, limit, offset, (err, keys) ->
-              if existingKeys?
-                next err, _.intersection existingKeys, keys
-              else
-                next err, keys
-      , (err, keys) ->
-        keys = keys.slice 0, limit if limit? #holy cow, this is busted!
-        callback err, keys
+          next err, ["#{table}:#{prop}", lowerScore, upperScore]
+
+      , (err, conditions) ->
+        return callback(err) if err?
+        #now that we have an array we can pass to redis, let's call our Lua function
+        queryId = uuid.v4()
+        offset = 0 unless offset?
+        limit = 999999 unless limit?
+        args = [self.keysForSha, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
+        self.client.evalsha args, (err, keys) ->
+          console.log "OMG ERR ->", err if err?
+          callback err, keys
 
 
   performZRangeByScore: (key, min, max, limit, offset, callback) ->
