@@ -2,15 +2,30 @@
 
 A Redis adapter for the [node-orm2](https://github.com/dresende/node-orm2) ORM.
 
-This is currently a work in progress, and is not yet intended to be used.
+Redis + Node ~= Peanut Butter + Chocolate :blue_heart: 
 
 ## Usage
 
-Don't.
+Incorporating this Redis adapter into your project is pretty straight forward, provided you're already using node-orm2 today.
+
+If you're not already using node-orm2, please check their [Github page](https://github.com/dresende/node-orm2) for details of how to get started.
+
+After that, you can start working with Redis by requiring this package and calling orm.addAdapter:
+
+    redis = require 'node-orm2-redis'
+
+    #more code here
+    orm.addAdapter 'redis', redis
+      orm.connect connectionString, (err, db)->
 
 ## How it works
 
-It doesn't.
+Under the hood, this Redis adapter makes several assumptions about how your keyspace should be managed.
+Each persisted model is stored as a `Hash`, and each property is converted to a numeric score and stored in a sorted set.
+
+Doing both allows for models to quickly be reconstituted and easily queried, at the cost of slightly more storage space per record.
+
+Since each property has to be converted to a numeric score, there are some known limitations...
 
 ## Known Limitations
 
