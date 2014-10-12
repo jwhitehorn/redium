@@ -197,7 +197,12 @@ class RedisAdapter
       async.map Object.keys(conditions), (prop, next) ->
         #first, let's convert node-orm's conditions from a hash, to an array with redis scores
         self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
-          next err, ["#{table}:#{prop}", lowerScore, upperScore]
+          if lowerScore.length? and typeof lowerScore is 'object'
+            op = "in"
+            lowerScore = lowerScore.join ','
+          else
+            op = "between"
+          next err, ["#{table}:#{prop}", op, lowerScore, upperScore]
 
       , (err, conditions) ->
         return callback(err) if err?
@@ -207,7 +212,6 @@ class RedisAdapter
         limit = 999999 unless limit?
         args = [self.keysForSha, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
         self.client.evalsha args, (err, keys) ->
-          console.log "OMG ERR ->", err if err?
           callback err, keys
 
 
