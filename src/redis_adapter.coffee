@@ -3,6 +3,7 @@ uuid  = require 'node-uuid'
 async = require 'async'
 crc   = require 'crc'
 fs    = require 'fs'
+path  = require 'path'
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
@@ -15,7 +16,8 @@ class RedisAdapter
   #Establishes your database connection.
   connect: (callback) ->
     self = this
-    fs.readFile './src/keys_for.lua', 'utf8', (err, lua) ->
+    filename = path.join path.dirname(fs.realpathSync(__filename)), "./keys_for.lua"
+    fs.readFile filename, 'utf8', (err, lua) ->
       return callback?(err) if err?
 
       self.client.script 'load', lua, (err, sha) ->

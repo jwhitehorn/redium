@@ -6,8 +6,8 @@
   "license": "BSD",
   "homepage": "https://github.com/jwhitehorn/node-orm2-redis",
   "scripts": {
-    "build":        "coffee --bare --compile --output lib src/*.coffee",
-    "prepublish":   "coffee --bare --compile --output lib src/*.coffee"
+    "build":        "coffee --bare --compile --output lib src/*.coffee && cp src/*.lua ./lib/",
+    "prepublish":   "coffee --bare --compile --output lib src/*.coffee && cp src/*.lua ./lib/"
   },
   "main": "lib/redis_adapter",
   "dependencies": {
