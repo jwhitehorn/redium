@@ -9,6 +9,7 @@ _     = require 'underscore'
 class RedisAdapter
   constructor: (config, connection, opts) ->
     @client = redis.createClient()
+    @customTypes = {}
     @blank = ->
       return
 

@@ -21,6 +21,16 @@ class Database
                       quantity: Number
                       product_description: String
 
+      db.defineType 'MyString',
+          datastoreType: (prop) ->
+            return 'TEXT'
+
+          valueToProperty: (value, prop) ->
+            return value
+
+          propertyToValue: (value, prop) ->
+            return value
+
       models =
         Order: order
         LineItem: lineItem
