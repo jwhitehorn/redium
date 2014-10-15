@@ -4,6 +4,7 @@ async = require 'async'
 crc   = require 'crc'
 fs    = require 'fs'
 path  = require 'path'
+_     = require 'underscore'
 
 class RedisAdapter
   constructor: (config, connection, opts) ->

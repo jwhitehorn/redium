@@ -1,7 +1,7 @@
 {
   "name": "node-orm2-redis",
   "description": "Redis adapter for node-orm2",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "author": "Jason Whitehorn",
   "license": "BSD",
   "homepage": "https://github.com/jwhitehorn/node-orm2-redis",
@@ -11,12 +11,12 @@
   },
   "main": "lib/redis_adapter",
   "dependencies": {
-    "orm": "~2.1.15",
+    "orm": "~2.1.19",
     "node-uuid": "~1.4.1",
     "async": "~0.9.0",
-    "redis": "~0.10.3",
-    "crc": "~2.1.1",
-    "underscore": "~1.6.0"
+    "redis": "~0.12.1",
+    "crc": "~3.0.0",
+    "underscore": "~1.7.0"
   },
   "devDependencies": {
     "mocha": "1.17.x",
