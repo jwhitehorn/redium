@@ -6,6 +6,8 @@ fs    = require 'fs'
 path  = require 'path'
 _     = require 'underscore'
 
+alreadyConfiguredLua = false
+
 class RedisAdapter
   constructor: (config, connection, opts) ->
     @client = redis.createClient()
@@ -13,19 +15,22 @@ class RedisAdapter
     @blank = ->
       return
 
-  isSql: true #hack to allow Enforce validations
+  isSql: false
 
   #Establishes your database connection.
   connect: (callback) ->
     self = this
-    filename = path.join path.dirname(fs.realpathSync(__filename)), "./keys_for.lua"
-    fs.readFile filename, 'utf8', (err, lua) ->
-      return callback?(err) if err?
+    unless alreadyConfiguredLua
+      filename = path.join path.dirname(fs.realpathSync(__filename)), "./keys_for.lua"
+      fs.readFile filename, 'utf8', (err, lua) ->
+        return callback?(err) if err?
 
-      self.client.script 'load', lua, (err, sha) ->
-        self.keysForSha = sha
+        self.client.script 'load', lua, (err, sha) ->
+          self.keysForSha = sha
 
-        callback(err) if callback?
+          callback(err) if callback?
+    else
+      return callback() unless callback?
 
   #Tests whether your connection is still alive.
   ping: (callback) ->
