@@ -6,7 +6,6 @@ fs    = require 'fs'
 path  = require 'path'
 _     = require 'underscore'
 
-alreadyConfiguredLua = false
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
@@ -20,31 +19,29 @@ class RedisAdapter
   #Establishes your database connection.
   connect: (callback) ->
     self = this
-    unless alreadyConfiguredLua
-      rootPath = path.dirname(fs.realpathSync(__filename))
-      async.series [
-        (next) ->
-          filename = path.join rootPath, "./keys_for.lua"
-          fs.readFile filename, 'utf8', (err, lua) ->
-            return callback?(err) if err?
+    rootPath = path.dirname(fs.realpathSync(__filename))
+    async.series [
+      (next) ->
+        filename = path.join rootPath, "./keys_for.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
 
-            self.client.script 'load', lua, (err, sha) ->
-              self.keysForSha = sha
-              next(err)
+          self.client.script 'load', lua, (err, sha) ->
+            self.keysForSha = sha
+            next(err)
 
-        (next) ->
-          filename = path.join rootPath, "./multi_zadd.lua"
-          fs.readFile filename, 'utf8', (err, lua) ->
-            return callback?(err) if err?
+      (next) ->
+        filename = path.join rootPath, "./multi_zadd.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
 
-            self.client.script 'load', lua, (err, sha) ->
-              self.multiZAddSha = sha
-              next(err)
+          self.client.script 'load', lua, (err, sha) ->
+            self.multiZAddSha = sha
+            next(err)
 
-      ], (err) ->
-        callback(err) if callback?
-    else
-      return callback() unless callback?
+    ], (err) ->
+      alreadyConfiguredLua = true
+      callback(err) if callback?
 
   #Tests whether your connection is still alive.
   ping: (callback) ->
@@ -53,7 +50,7 @@ class RedisAdapter
 
   #Closes your database connection.
   close: (callback) ->
-    @client.end() if @client?
+    @client.quit() if @client?
     callback() if callback?
 
 
