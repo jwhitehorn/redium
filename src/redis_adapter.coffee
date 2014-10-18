@@ -154,15 +154,15 @@ class RedisAdapter
     callback() if callback?
 
   score: (value) ->
+    if typeof value == "string"
+      score = parseInt crc.crc32(value), 16
+      return score
     unless value? and isNaN(value) ==false
       return "-inf"
     if typeof value == "number"
       return value
     if value instanceof Date
       return value.getTime()
-    if typeof value == "string"
-      score = parseInt crc.crc32(value), 16
-      return score
     if typeof value == "boolean"
       return 1 if value == true
       return 0 if value == false
