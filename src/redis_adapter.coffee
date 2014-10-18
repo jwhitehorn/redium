@@ -21,14 +21,28 @@ class RedisAdapter
   connect: (callback) ->
     self = this
     unless alreadyConfiguredLua
-      filename = path.join path.dirname(fs.realpathSync(__filename)), "./keys_for.lua"
-      fs.readFile filename, 'utf8', (err, lua) ->
-        return callback?(err) if err?
+      rootPath = path.dirname(fs.realpathSync(__filename))
+      async.series [
+        (next) ->
+          filename = path.join rootPath, "./keys_for.lua"
+          fs.readFile filename, 'utf8', (err, lua) ->
+            return callback?(err) if err?
 
-        self.client.script 'load', lua, (err, sha) ->
-          self.keysForSha = sha
+            self.client.script 'load', lua, (err, sha) ->
+              self.keysForSha = sha
+              next(err)
 
-          callback(err) if callback?
+        (next) ->
+          filename = path.join rootPath, "./multi_zadd.lua"
+          fs.readFile filename, 'utf8', (err, lua) ->
+            return callback?(err) if err?
+
+            self.client.script 'load', lua, (err, sha) ->
+              self.multiZAddSha = sha
+              next(err)
+
+      ], (err) ->
+        callback(err) if callback?
     else
       return callback() unless callback?
 
@@ -90,11 +104,15 @@ class RedisAdapter
     self.client.hmset key, data, (err) ->
       return callback(err) if err? and callback?
 
-      async.each Object.keys(data), (prop, next) ->
+      props = Object.keys(data)
+      args = [self.multiZAddSha, 0, props.length]
+      for prop in props
         score = self.score data[prop]
-        self.client.zadd "#{table}:#{prop}", score, key, (err) ->
-          next err
-      , (err) ->
+        args.push "#{table}:#{prop}"
+        args.push score
+        args.push key
+
+      self.client.evalsha args, (err) ->
         callback(err, idName: idValue) if callback?
 
   update: (table, changes, conditions, callback) ->
