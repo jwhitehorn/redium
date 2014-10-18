@@ -6,6 +6,8 @@ fs    = require 'fs'
 path  = require 'path'
 _     = require 'underscore'
 
+keysForSha = null
+multiZAddSha = null
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
@@ -22,21 +24,23 @@ class RedisAdapter
     rootPath = path.dirname(fs.realpathSync(__filename))
     async.series [
       (next) ->
+        return next() if keysForSha?
         filename = path.join rootPath, "./keys_for.lua"
         fs.readFile filename, 'utf8', (err, lua) ->
           return callback?(err) if err?
 
           self.client.script 'load', lua, (err, sha) ->
-            self.keysForSha = sha
+            keysForSha = sha
             next(err)
 
       (next) ->
+        return next() if multiZAddSha?
         filename = path.join rootPath, "./multi_zadd.lua"
         fs.readFile filename, 'utf8', (err, lua) ->
           return callback?(err) if err?
 
           self.client.script 'load', lua, (err, sha) ->
-            self.multiZAddSha = sha
+            multiZAddSha = sha
             next(err)
 
     ], (err) ->
@@ -102,7 +106,7 @@ class RedisAdapter
       return callback(err) if err? and callback?
 
       props = Object.keys(data)
-      args = [self.multiZAddSha, 0, props.length]
+      args = [multiZAddSha, 0, props.length]
       for prop in props
         score = self.score data[prop]
         args.push "#{table}:#{prop}"
@@ -234,7 +238,7 @@ class RedisAdapter
         queryId = uuid.v4()
         offset = 0 unless offset?
         limit = 999999 unless limit?
-        args = [self.keysForSha, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
+        args = [keysForSha, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
         self.client.evalsha args, (err, keys) ->
           callback err, keys
 
