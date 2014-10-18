@@ -21,6 +21,8 @@ class Database
                       quantity: Number
                       product_description: String
 
+      lineItem.hasOne "order", order, reverse: "items"
+
       db.defineType 'MyString',
           datastoreType: (prop) ->
             return 'TEXT'
