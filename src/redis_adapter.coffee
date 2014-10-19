@@ -8,6 +8,7 @@ _     = require 'underscore'
 
 keysForSha = null
 multiZAddSha = null
+hgetManySha = null
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
@@ -31,6 +32,16 @@ class RedisAdapter
 
           self.client.script 'load', lua, (err, sha) ->
             keysForSha = sha
+            next(err)
+
+      (next) ->
+        return next() if hgetManySha?
+        filename = path.join rootPath, "./hget_many.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          self.client.script 'load', lua, (err, sha) ->
+            hgetManySha = sha
             next(err)
 
       (next) ->
@@ -170,9 +181,18 @@ class RedisAdapter
 
   mgetKeys: (keys, callback) ->
     self = this
-    async.map keys, (key, next) ->
-      self.client.hgetall key, next
-    , (err, results) ->
+    args = [hgetManySha, 0, keys.length].concat keys
+
+    self.client.evalsha args, (err, rawResults) ->
+      results = []
+      if rawResults?
+        for rawResult in rawResults
+          obj = {}
+          i = 0
+          while i isnt rawResult.length
+            obj[rawResult[i]] = rawResult[i+1]
+            i += 2
+          results.push obj
       callback err, results
 
   scoreRange: (prop, conditions, callback) ->
