@@ -4,13 +4,43 @@ local offset          = ARGV[3]
 local conditionsCount = ARGV[4]
 
 local function split(inputstr)
-        local t={}
-        local i=1
-        for str in string.gmatch(inputstr, "([^,]+)") do
-                t[i] = str
-                i = i + 1
-        end
-        return t
+  local t={}
+  local i=1
+  for str in string.gmatch(inputstr, "([^,]+)") do
+          t[i] = str
+          i = i + 1
+  end
+  return t
+end
+
+local function massive_redis_command(command, key, t)
+  --https://github.com/antirez/redis/issues/678
+  local i = 1
+  local temp = {}
+  while(i <= #t) do
+    table.insert(temp, t[i+1])
+    table.insert(temp, t[i])
+    if #temp >= 1000 then
+        redis.call(command, key, unpack(temp))
+        temp = {}
+    end
+    i = i+2
+  end
+  if #temp > 0 then
+    redis.call(command, key, unpack(temp))
+  end
+end
+
+local function slice(array, start_index, length)
+  --https://github.com/mirven/underscore.lua
+  local sliced_array = {}
+
+  start_index = math.max(start_index, 1)
+  local end_index = math.min(start_index+length-1, #array)
+  for i=start_index, end_index do
+    sliced_array[#sliced_array+1] = array[i]
+  end
+  return sliced_array
 end
 
 local function union(arrayA, arrayB)
@@ -36,7 +66,8 @@ local function union(arrayA, arrayB)
   return result
 end
 
-
+local subSets = {}
+local results = {}
 for i=0,conditionsCount do
   local offset = i*4
   local set      = ARGV[5 + offset]
@@ -55,13 +86,18 @@ for i=0,conditionsCount do
       keys = union(keys, altKeys)
     end
   end
-  local keyCount = table.getn(keys)
-  for j=0, keyCount do
-    local key = keys[j+1]
-    redis.call('ZINCRBY', queryId, '1', key)
+
+  local subQueryId = queryId .. '-' .. i
+  if table.getn(keys) > 0 then
+    massive_redis_command('SADD', subQueryId, keys)
+    table.insert(subSets, subQueryId)
   end
 end
 
-local result = redis.call('ZRANGEBYSCORE', queryId, conditionsCount, conditionsCount, 'limit', offset, limit)
-redis.call('DEL', queryId)
+local result = {}
+if table.getn(subSets) > 0 then
+  result = redis.call('SINTER', unpack(subSets))
+  redis.call('DEL', unpack(subSets))
+  result = slice(result, offset+1, limit)
+end
 return result
