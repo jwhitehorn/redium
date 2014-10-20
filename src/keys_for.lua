@@ -68,9 +68,9 @@ end
 
 local subSets = {}
 local toDelete = {}
-local results = {}
-for i=0,conditionsCount do
-  local offset = i*4
+
+for i=1,conditionsCount do
+  local offset = (i-1)*4
   local set      = ARGV[5 + offset]
   local op       = ARGV[6 + offset]
   local minScore = ARGV[7 + offset]
@@ -91,20 +91,23 @@ for i=0,conditionsCount do
     table.insert(subSets, subSet)
   end
 
-  if table.getn(keys) > 0 then
+  if table.getn(keys) > 0 and op ~= "set" then
     local subQueryId = queryId .. '-' .. i
     massive_redis_command('SADD', subQueryId, keys)
     table.insert(subSets, subQueryId)
     table.insert(toDelete, subQueryId)
+  elseif op ~= "set" then
+    subSets = {}
+    break
   end
 end
 
 local result = {}
 if table.getn(subSets) > 0 then
   result = redis.call('SINTER', unpack(subSets))
-  if table.getn(toDelete) > 0 then
-    redis.call('DEL', unpack(toDelete))
-  end
   result = slice(result, offset+1, limit)
+end
+if table.getn(toDelete) > 0 then
+  redis.call('DEL', unpack(toDelete))
 end
 return result

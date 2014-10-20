@@ -118,11 +118,39 @@ describe 'Redis adapter find', ->
         done()
 
 
-  it 'should find nothing', (done) ->
+  it 'should find nothing - one series, one discrete', (done) ->
     db.open (err, models, close) ->
       filter =
         total: orm.eq 45.95
         sent_to_fullment: true
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 0
+
+        close()
+        done()
+
+  it 'should find nothing - both series', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.eq 45.95
+        order_date: orm.lte new Date(Date.parse("2013-12-31T00:00:00Z"))
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.not.exist
+        expect(orders).to.exist
+        orders.length.should.equal 0
+
+        close()
+        done()
+
+
+  it 'should find nothing - single series', (done) ->
+    db.open (err, models, close) ->
+      filter =
+        total: orm.gt 400.00
 
       models.Order.find filter, (err, orders) ->
         expect(err).to.not.exist
