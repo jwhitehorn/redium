@@ -7,10 +7,13 @@ path  = require 'path'
 _     = require 'underscore'
 
 keysForSha = null
-multiZAddSha = null
+insertSha = null
 hgetManySha = null
 
 class RedisAdapter
+  @series: 1
+  @discrete: 2
+
   constructor: (config, connection, opts) ->
     @client = redis.createClient()
     @customTypes = {}
@@ -45,13 +48,13 @@ class RedisAdapter
             next(err)
 
       (next) ->
-        return next() if multiZAddSha?
-        filename = path.join rootPath, "./multi_zadd.lua"
+        return next() if insertSha?
+        filename = path.join rootPath, "./insert.lua"
         fs.readFile filename, 'utf8', (err, lua) ->
           return callback?(err) if err?
 
           self.client.script 'load', lua, (err, sha) ->
-            multiZAddSha = sha
+            insertSha = sha
             next(err)
 
     ], (err) ->
@@ -117,10 +120,14 @@ class RedisAdapter
       return callback(err) if err? and callback?
 
       props = Object.keys(data)
-      args = [multiZAddSha, 0, props.length]
+      args = [insertSha, 0, props.length]
       for prop in props
-        score = self.score data[prop]
+        value = data[prop]
+        score = self.score value
+        storage = self.storageFor value
+        #console.log "storage", storage
         args.push "#{table}:#{prop}"
+        args.push storage
         args.push score
         args.push key
 
@@ -179,6 +186,12 @@ class RedisAdapter
       return 0 if value == false
     return 0
 
+  storageFor: (value) ->
+    if typeof value == "boolean"
+      return RedisAdapter.discrete
+
+    return RedisAdapter.series
+
   mgetKeys: (keys, callback) ->
     self = this
     args = [hgetManySha, 0, keys.length].concat keys
@@ -205,6 +218,7 @@ class RedisAdapter
     else
       value = conditions[prop]
 
+    storage = self.storageFor value
     lowerScore = "-inf"
     upperScore = "+inf"
     if comparator == "lt"
@@ -223,12 +237,12 @@ class RedisAdapter
         scores = []
         for v in value
           scores.push self.score v
-        return callback null, scores, null
+        return callback null, storage, scores, null
 
       lowerScore = self.score value
       upperScore = lowerScore
 
-    callback null, lowerScore, upperScore
+    callback null, storage, lowerScore, upperScore
 
 
   keysFor: (table, conditions, opts, callback) ->
@@ -244,8 +258,10 @@ class RedisAdapter
     else
       async.map Object.keys(conditions), (prop, next) ->
         #first, let's convert node-orm's conditions from a hash, to an array with redis scores
-        self.scoreRange prop, conditions, (err, lowerScore, upperScore) ->
-          if lowerScore.length? and typeof lowerScore is 'object'
+        self.scoreRange prop, conditions, (err, storage, lowerScore, upperScore) ->
+          if storage == RedisAdapter.discrete
+            op = "set"
+          else if lowerScore.length? and typeof lowerScore is 'object'
             op = "in"
             lowerScore = lowerScore.join ','
           else

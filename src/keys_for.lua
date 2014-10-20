@@ -67,6 +67,7 @@ local function union(arrayA, arrayB)
 end
 
 local subSets = {}
+local toDelete = {}
 local results = {}
 for i=0,conditionsCount do
   local offset = i*4
@@ -85,19 +86,25 @@ for i=0,conditionsCount do
       local altKeys = redis.call('ZRANGEBYSCORE', set, alt, alt)
       keys = union(keys, altKeys)
     end
+  elseif op == "set" then
+    local subSet = set .. '-' .. minScore
+    table.insert(subSets, subSet)
   end
 
-  local subQueryId = queryId .. '-' .. i
   if table.getn(keys) > 0 then
+    local subQueryId = queryId .. '-' .. i
     massive_redis_command('SADD', subQueryId, keys)
     table.insert(subSets, subQueryId)
+    table.insert(toDelete, subQueryId)
   end
 end
 
 local result = {}
 if table.getn(subSets) > 0 then
   result = redis.call('SINTER', unpack(subSets))
-  redis.call('DEL', unpack(subSets))
+  if table.getn(toDelete) > 0 then
+    redis.call('DEL', unpack(toDelete))
+  end
   result = slice(result, offset+1, limit)
 end
 return result
