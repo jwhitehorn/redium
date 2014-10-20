@@ -132,3 +132,31 @@ describe 'Redis adapter updates', ->
       ], ->
         close()
         done()
+
+  it 'should update discrete propties', (done) ->
+    db.open (err, models, close) ->
+      async.series [
+        (next) ->
+          models.Order.one total: 45.95, (err, order) ->
+            order.sent_to_fullment = false
+
+            order.save next
+
+        (next) ->
+          models.Order.find sent_to_fullment: false, (err, orders) ->
+            expect(err).to.not.exist
+            expect(orders).to.exist
+            orders.length.should.equal 2
+
+            next err
+
+        (next) ->
+          models.Order.find sent_to_fullment: true, (err, orders) ->
+            expect(err).to.not.exist
+            expect(orders).to.exist
+            orders.length.should.equal 1
+
+            next err
+      ], ->
+        close()
+        done()
