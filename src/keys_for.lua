@@ -97,6 +97,8 @@ for i=1,conditionsCount do
     table.insert(subSets, subQueryId)
     table.insert(toDelete, subQueryId)
   elseif op ~= "set" then
+    -- one of our sub-filters returned 0 results
+    -- we should stop immediately, and return nothing
     subSets = {}
     break
   end

@@ -122,7 +122,7 @@ describe 'Redis adapter find', ->
     db.open (err, models, close) ->
       filter =
         total: orm.eq 45.95
-        sent_to_fullment: true
+        sent_to_fullment: false
 
       models.Order.find filter, (err, orders) ->
         expect(err).to.not.exist
