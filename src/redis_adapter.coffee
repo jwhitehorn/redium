@@ -55,6 +55,16 @@ class RedisAdapter
             commands.createIndex = sha
             next(err)
 
+      (next) ->
+        return next() if commands.updateIndex?
+        filename = path.join rootPath, "./update_index.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          self.client.script 'load', lua, (err, sha) ->
+            commands.updateIndex = sha
+            next(err)
+
     ], (err) ->
       alreadyConfiguredLua = true
       callback(err) if callback?
@@ -123,7 +133,6 @@ class RedisAdapter
         value = data[prop]
         score = self.score value
         storage = self.storageFor value
-        #console.log "storage", storage
         args.push "#{table}:#{prop}"
         args.push storage
         args.push score
@@ -136,16 +145,24 @@ class RedisAdapter
     self = this
     callback = self.blank unless callback?
     id = conditions["id"]
-    multi = self.client.multi()
+
+    props = Object.keys changes
+
     key = "#{table}:id:#{id}"
-    async.each Object.keys(changes), (prop, next) ->
-      multi.hset key, prop, changes[prop]
-      score = self.score changes[prop]
-      multi.zadd "#{table}:#{prop}", score, key
-      next()
-    , ->
-      multi.exec (err) ->
-        callback err
+    args = [commands.updateIndex, 0, props.length]
+    for prop in props
+      value = changes[prop]
+      score = self.score value
+      storage = self.storageFor value
+      args.push "#{table}:#{prop}"
+      args.push prop
+      args.push storage
+      args.push score
+      args.push value
+      args.push key
+
+    self.client.evalsha args, (err) ->
+      callback err
 
   remove: (table, conditions, callback) ->
     callback() if callback?

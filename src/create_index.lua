@@ -12,5 +12,6 @@ for i=0, length do
   elseif storage == '2' then
     local discreteSet = set .. '-' .. score
     redis.call('SADD', discreteSet, member)
+    redis.call('SADD', set .. ':sets', discreteSet)
   end
 end
