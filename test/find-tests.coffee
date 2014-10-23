@@ -495,7 +495,7 @@ describe 'Redis adapter find', ->
     @timeout 60000
 
     db.open (err, models, close) ->
-      async.times 20000, (n, next) ->
+      async.times 11000, (n, next) ->
         order =
           shipping_address: "100 Main St."
           total: 45.95

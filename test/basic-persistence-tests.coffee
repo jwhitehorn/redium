@@ -39,9 +39,27 @@ describe 'Redis adapter basics', ->
         shipping_address: "100 Main St."
 
       models.Order.create order, (err, order) ->
-        console.log "-->", err.stack if err?
         expect(err).to.not.exist
         expect(order.id).to.exist
 
         close()
         done()
+
+
+  it 'should save a model with missing data, and come back ok', (done) ->
+    db.open (err, models, close) ->
+      order =
+        shipping_address: "100 Main St."
+
+      models.Order.create order, (err, order) ->
+        expect(err).to.not.exist
+        expect(order.id).to.exist
+
+        models.Order.one id: order.id, (err, order) ->
+          expect(err).to.not.exist
+          expect(order).to.exist
+          expect(order.total).to.not.exist
+          expect(order.order_date).to.not.exist
+
+          close()
+          done()

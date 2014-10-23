@@ -88,7 +88,10 @@ class RedisAdapter
   #Maps a database value to the property value to use for the mapped object.
   valueToProperty: (value, property) ->
     if property["type"] == "number"
-      return parseFloat value
+      v = parseFloat value
+      if isNaN(v)
+        v = null
+      return v
     if property["type"] == "boolean"
       return value == 'true' || value == '1' || value == 1 || value == true
     if property["type"] == "text"
@@ -96,7 +99,10 @@ class RedisAdapter
         return null
     if property["type"] == "date"
       return null unless value?
-      return new Date Date.parse value
+      v = new Date Date.parse value
+      if isNaN(v)
+        v = null
+      return v
     return value
 
   on: (event, callback) ->
