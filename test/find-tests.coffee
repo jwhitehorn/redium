@@ -489,3 +489,26 @@ describe 'Redis adapter find', ->
 
           close()
           done()
+
+
+  it 'should no be stupid with large queries', (done) ->
+    @timeout 60000
+
+    db.open (err, models, close) ->
+      async.times 20000, (n, next) ->
+        order =
+          shipping_address: "100 Main St."
+          total: 45.95
+          order_date: new Date Date.parse "2014-01-10T04:30:00Z"
+          sent_to_fullment: true
+        models.Order.create order, (err) ->
+          next err
+      , (err) ->
+        expect(err).to.not.exist
+
+        models.Order.find total: 45.95, (err, orders) ->
+          expect(err).to.exist
+          expect(orders).to.not.exist
+
+          close()
+          done()

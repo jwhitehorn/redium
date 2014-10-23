@@ -291,6 +291,10 @@ class RedisAdapter
         limit = 999999 unless limit?
         args = [commands.keysFor, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
         self.client.evalsha args, (err, keys) ->
+          if keys == "ERROR"
+            err = new Error "Query too large"
+            err.code = 4000
+            return callback err
           callback err, keys
 
 

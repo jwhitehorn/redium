@@ -3,6 +3,8 @@ local limit           = ARGV[2]
 local offset          = ARGV[3]
 local conditionsCount = ARGV[4]
 
+local hardlimit = 10000 --no single subquery can return more than this
+
 local function split(inputstr)
   local t={}
   local i=1
@@ -68,6 +70,7 @@ end
 
 local subSets = {}
 local toDelete = {}
+local error = false
 
 for i=1,conditionsCount do
   local offset = (i-1)*4
@@ -77,13 +80,13 @@ for i=1,conditionsCount do
   local maxScore = ARGV[8 + offset]
   local keys = {}
   if op == "between" then
-    keys = redis.call('ZRANGEBYSCORE', set, minScore, maxScore)
+    keys = redis.call('ZRANGEBYSCORE', set, minScore, maxScore, 'LIMIT', 0, hardlimit)
   elseif op == "in" then
     local alts = split(minScore)
     local altsCount = table.getn(alts)
     for j=0, altsCount do
       local alt = alts[j+1]
-      local altKeys = redis.call('ZRANGEBYSCORE', set, alt, alt)
+      local altKeys = redis.call('ZRANGEBYSCORE', set, alt, alt, 'LIMIT', 0, hardlimit)
       keys = union(keys, altKeys)
     end
   elseif op == "set" then
@@ -91,7 +94,11 @@ for i=1,conditionsCount do
     table.insert(subSets, subSet)
   end
 
-  if table.getn(keys) > 0 and op ~= "set" then
+  if table.getn(keys) == hardlimit then
+    subSets = {}
+    error = true
+    break
+  elseif table.getn(keys) > 0 and op ~= "set" then
     local subQueryId = queryId .. '-' .. i
     massive_redis_command('SADD', subQueryId, keys)
     table.insert(subSets, subQueryId)
@@ -104,12 +111,16 @@ for i=1,conditionsCount do
   end
 end
 
-local result = {}
-if table.getn(subSets) > 0 then
-  result = redis.call('SINTER', unpack(subSets))
-  result = slice(result, offset+1, limit)
+if error then
+  return "ERROR"
+else
+  local result = {}
+  if table.getn(subSets) > 0 then
+    result = redis.call('SINTER', unpack(subSets))
+    result = slice(result, offset+1, limit)
+  end
+  if table.getn(toDelete) > 0 then
+    redis.call('DEL', unpack(toDelete))
+  end
+  return result
 end
-if table.getn(toDelete) > 0 then
-  redis.call('DEL', unpack(toDelete))
-end
-return result
