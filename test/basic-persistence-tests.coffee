@@ -63,3 +63,21 @@ describe 'Redis adapter basics', ->
 
           close()
           done()
+
+
+  it 'should handle custom data types', (done) ->
+    db.open (err, models, close) ->
+      order =
+        status_code: "LB"
+
+      models.Order.create order, (err, order) ->
+        expect(err).to.not.exist
+        expect(order.id).to.exist
+
+        models.Order.one id: order.id, (err, order) ->
+          expect(err).to.not.exist
+          expect(order).to.exist
+          order.status_code.should.equal "lb"
+
+          close()
+          done()

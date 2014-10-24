@@ -9,21 +9,7 @@ class Database
     orm.connect 'redis://localhost:6380', (err, db)->
       return callback(err) if err?
 
-      db.settings.set 'instance.cache', false
-      order = db.define "orders",
-                      shipping_address: String
-                      total: Number
-                      order_date: Date
-                      sent_to_fullment: Boolean
-
-      lineItem = db.define "line_items",
-                      order_id: String
-                      quantity: Number
-                      product_description: String
-
-      lineItem.hasOne "order", order, reverse: "items"
-
-      db.defineType 'MyString',
+      db.defineType 'LowerCaseString',
           datastoreType: (prop) ->
             return 'TEXT'
 
@@ -31,7 +17,23 @@ class Database
             return value
 
           propertyToValue: (value, prop) ->
-            return value
+            return null unless value?
+            return value.toLowerCase()
+
+      db.settings.set 'instance.cache', false
+      order = db.define "orders",
+                      shipping_address: String
+                      total: Number
+                      order_date: Date
+                      sent_to_fullment: Boolean
+                      status_code: "LowerCaseString"
+
+      lineItem = db.define "line_items",
+                      order_id: String
+                      quantity: Number
+                      product_description: String
+
+      lineItem.hasOne "order", order, reverse: "items"
 
       models =
         Order: order

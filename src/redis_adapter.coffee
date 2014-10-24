@@ -82,6 +82,10 @@ class RedisAdapter
 
   #Maps an object property to the correlated value to use for the database.
   propertyToValue: (value, property) ->
+    typeHandler = @customTypes[property.type]
+    if typeHandler and "propertyToValue" of typeHandler
+      return typeHandler.propertyToValue(value)
+
     return value
 
 
@@ -103,6 +107,11 @@ class RedisAdapter
       if isNaN(v)
         v = null
       return v
+
+    typeHandler = @customTypes[property.type]
+    if typeHandler and "valueToProperty" of typeHandler
+      return typeHandler.valueToProperty(value)
+
     return value
 
   on: (event, callback) ->
