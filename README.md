@@ -30,8 +30,19 @@ Since each property has to be converted to a numeric score, there are some known
 ## Known Limitations
 
 * When querying with a `String` property, only equalities are supported.
-* not-equals (`orm.ne`) is not supported.
+* not-equals (`orm.ne`) is **not** supported.
+  * No, it will _not_ be supported. Ever.
+* Limit & Offset are "supported", but don't make a lot of sense for Redis, YMMV.
+  * Because of this, `lt`, `gt`, `lte`, and `gte` are discouraged for querying against contious series (e.g. dates) - see the next bullet for more info.
+* Each sub-filter has a hard limit of the number of keys it'll match. Any sub-filter exiting this limit will abort the entire filter, and return an error.
+  * This is done to prevent queries from running amok. Hard limit is currently 10,000 records.
+  * Seriously, this (and the previous bullet on offset & limit) aren't issues - this is Redis, not SQL, find a more nature way to paginate your data!
 * Each model has to have an id, it has to be called `id`, and it'll be assign as a GUID (unless already assigned).
+* Deletes are not yet implemented - easy to do, coming REAL soon though!
+
+## Keyspace Map
+
+_coming soon_
 
 ## License
 
