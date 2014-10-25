@@ -5,7 +5,6 @@ module.exports =
   adapter: adapter
   index: indexTypes
   plugin: (db, opts) ->
-
     beforeDefine: (model, properties, opts) ->
       return unless opts.indexes?
       for property in Object.keys(opts.indexes)
