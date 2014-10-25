@@ -38,7 +38,6 @@ Since each property has to be converted to a numeric score, there are some known
   * This is done to prevent queries from running amok. Hard limit is currently 10,000 records.
   * Seriously, this (and the previous bullet on offset & limit) aren't issues - this is Redis, not SQL, find a more natural way to paginate your data!
 * Each model has to have an id, it has to be called `id`, and it'll be assign as a GUID (unless already assigned).
-* Deletes are not yet implemented - easy to do, coming REAL soon though!
 
 ## Keyspace Map
 

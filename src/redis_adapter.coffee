@@ -65,6 +65,16 @@ class RedisAdapter
             commands.updateIndex = sha
             next(err)
 
+      (next) ->
+        return next() if commands.delete?
+        filename = path.join rootPath, "./delete.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          self.client.script 'load', lua, (err, sha) ->
+            commands.delete = sha
+            next(err)
+
     ], (err) ->
       alreadyConfiguredLua = true
       callback(err) if callback?
@@ -180,7 +190,16 @@ class RedisAdapter
       callback err
 
   remove: (table, conditions, callback) ->
-    callback() if callback?
+    self = this
+    callback = self.blank unless callback?
+
+    self.keysFor table, conditions, {}, (err, keys) ->
+      return callback(err) if err?
+
+      async.eachSeries keys, (key, next) ->
+        args = [commands.delete, 0, table, key]
+        self.client.evalsha args, next
+      , callback
 
   count: (table, conditions, opts, callback) ->
     callback(null, []) unless callback?
@@ -294,7 +313,7 @@ class RedisAdapter
         #first, let's convert node-orm's conditions from a hash, to an array with redis scores
         self.scoreRange prop, conditions, (err, storage, lowerScore, upperScore) ->
           return next(err) if err?
-          
+
           if storage == RedisAdapter.discrete
             op = "set"
           else if lowerScore.length? and typeof lowerScore is 'object'
