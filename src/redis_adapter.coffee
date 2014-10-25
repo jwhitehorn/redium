@@ -1,17 +1,16 @@
-redis = require 'redis'
-uuid  = require 'node-uuid'
-async = require 'async'
-crc   = require 'crc'
-fs    = require 'fs'
-path  = require 'path'
-_     = require 'underscore'
+redis      = require 'redis'
+uuid       = require 'node-uuid'
+async      = require 'async'
+crc        = require 'crc'
+fs         = require 'fs'
+path       = require 'path'
+_          = require 'underscore'
+indexTypes = require './index_types'
 
 commands = {}
+indexOptions = {}
 
 class RedisAdapter
-  @series: 1
-  @discrete: 2
-
   constructor: (config, connection, opts) ->
     @client = redis.createClient()
     @customTypes = {}
@@ -19,6 +18,12 @@ class RedisAdapter
       return
 
   isSql: false
+
+  @index: (model, property, indexType) ->
+    modelOptions = indexOptions[model]
+    modelOptions = {} unless modelOptions?
+    modelOptions[property] = indexType
+    indexOptions[model] = modelOptions
 
   #Establishes your database connection.
   connect: (callback) ->
@@ -237,9 +242,9 @@ class RedisAdapter
 
   storageFor: (value) ->
     if typeof value == "boolean"
-      return RedisAdapter.discrete
+      return indexTypes.discrete
 
-    return RedisAdapter.series
+    return indexTypes.series
 
   mgetKeys: (keys, callback) ->
     self = this
@@ -314,7 +319,7 @@ class RedisAdapter
         self.scoreRange prop, conditions, (err, storage, lowerScore, upperScore) ->
           return next(err) if err?
 
-          if storage == RedisAdapter.discrete
+          if storage == indexTypes.discrete
             op = "set"
           else if lowerScore.length? and typeof lowerScore is 'object'
             op = "in"

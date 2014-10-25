@@ -1,14 +1,14 @@
 orm    = require 'orm'
-redis  = require '../../src/redis_adapter.coffee'
+redis  = require '../../src/main.coffee'
 client = require('redis').createClient()
 
 class Database
   @open: (callback) ->
-    orm.addAdapter 'redis', redis
+    orm.addAdapter 'redis', redis.adapter
 
     orm.connect 'redis://localhost:6380', (err, db)->
       return callback(err) if err?
-
+      db.use redis.plugin
       db.defineType 'LowerCaseString',
           datastoreType: (prop) ->
             return 'TEXT'
@@ -27,6 +27,10 @@ class Database
                       order_date: Date
                       sent_to_fullment: Boolean
                       status_code: "LowerCaseString"
+                      warehouse_code: Number
+              ,
+                      indexes:
+                        warehouse_code: redis.index.discrete
 
       lineItem = db.define "line_items",
                       order_id: String
