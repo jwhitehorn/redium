@@ -254,23 +254,17 @@ describe 'Redis adapter find', ->
         close()
         done()
 
-  ###
-  it 'should find by address (ne)', (done) ->
+
+  it 'should return an error when attempting to use not-equals (ne)', (done) ->
     db.open (err, models, close) ->
       filter =
         shipping_address: orm.ne "100 Main Street"
 
       models.Order.find filter, (err, orders) ->
-        expect(err).to.not.exist
-        expect(orders).to.exist
-        orders.length.should.equal 2
-
-        for order in orders
-          order.shipping_address.should.not.equal "100 Main Street"
+        expect(err).to.exist
 
         close()
         done()
-  ###
 
 
   it 'should find total greater than or equal to 45.95 before the 15th', (done) ->

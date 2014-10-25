@@ -251,7 +251,11 @@ class RedisAdapter
     storage = self.storageFor value
     lowerScore = "-inf"
     upperScore = "+inf"
-    if comparator == "lt"
+    if comparator == "ne"
+      err = new Error "Unsupported operator"
+      err.code = 4001
+      return callback err
+    else if comparator == "lt"
       upperScore = self.score(value) - 1
     else if comparator == "lte"
       upperScore = self.score value
@@ -289,6 +293,8 @@ class RedisAdapter
       async.map Object.keys(conditions), (prop, next) ->
         #first, let's convert node-orm's conditions from a hash, to an array with redis scores
         self.scoreRange prop, conditions, (err, storage, lowerScore, upperScore) ->
+          return next(err) if err?
+          
           if storage == RedisAdapter.discrete
             op = "set"
           else if lowerScore.length? and typeof lowerScore is 'object'

@@ -2,7 +2,7 @@
 
 A Redis adapter for the [node-orm2](https://github.com/dresende/node-orm2) ORM.
 
-Redis + Node ~= Peanut Butter + Chocolate :blue_heart: 
+Redis + Node ~= Peanut Butter + Chocolate :blue_heart:
 
 ## Usage
 
@@ -30,7 +30,7 @@ Since each property has to be converted to a numeric score, there are some known
 ## Known Limitations
 
 * When querying with a `String` property, only equalities are supported.
-* not-equals (`orm.ne`) is currently not supported.
+* not-equals (`orm.ne`) is not supported.
 * Each model has to have an id, it has to be called `id`, and it'll be assign as a GUID (unless already assigned).
 
 ## License
