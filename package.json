@@ -9,7 +9,7 @@
     "build":        "coffee --bare --compile --output lib src/*.coffee && cp src/*.lua ./lib/",
     "prepublish":   "coffee --bare --compile --output lib src/*.coffee && cp src/*.lua ./lib/"
   },
-  "main": "lib/redis_adapter",
+  "main": "lib/main",
   "dependencies": {
     "orm": "~2.1.19",
     "node-uuid": "~1.4.1",

@@ -15,7 +15,7 @@ After that, you can start working with Redis by requiring this package and calli
     redis = require 'node-orm2-redis'
 
     #more code here
-    orm.addAdapter 'redis', redis
+    orm.addAdapter 'redis', redis.adapter
       orm.connect connectionString, (err, db)->
 
 ## How it works
