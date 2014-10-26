@@ -46,6 +46,22 @@ describe 'Redis adapter basics', ->
         done()
 
 
+  it 'should save model with a special index request', (done) ->
+    db.open (err, models, close) ->
+      order =
+        shipping_address: "100 Main St."
+        total: 45.95
+        order_date: new Date()
+        sent_to_fullment: false
+        warehouse_code: 4
+
+      models.Order.create order, (err, order) ->
+        expect(err).to.not.exist
+        expect(order.id).to.exist
+
+        close()
+        done()
+
   it 'should save a model with missing data, and come back ok', (done) ->
     db.open (err, models, close) ->
       order =

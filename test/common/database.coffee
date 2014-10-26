@@ -28,9 +28,11 @@ class Database
                       sent_to_fullment: Boolean
                       status_code: "LowerCaseString"
                       warehouse_code: Number
+                      tracking_number: String
               ,
                       indexes:
                         warehouse_code: redis.index.discrete
+                        tracking_number: redis.index.ignore
 
       lineItem = db.define "line_items",
                       order_id: String

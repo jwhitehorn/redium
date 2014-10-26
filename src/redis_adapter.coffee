@@ -162,7 +162,7 @@ class RedisAdapter
       for prop in props
         value = data[prop]
         score = self.score value
-        storage = self.storageFor value
+        storage = self.storageFor table, prop, value
         args.push "#{table}:#{prop}"
         args.push storage
         args.push score
@@ -183,7 +183,7 @@ class RedisAdapter
     for prop in props
       value = changes[prop]
       score = self.score value
-      storage = self.storageFor value
+      storage = self.storageFor table, prop, value
       args.push "#{table}:#{prop}"
       args.push prop
       args.push storage
@@ -240,7 +240,11 @@ class RedisAdapter
       return 0 if value == false
     return 0
 
-  storageFor: (value) ->
+  storageFor: (model, prop, value) ->
+    modelOptions = indexOptions[model]
+    if modelOptions?
+      return modelOptions[prop] if modelOptions[prop]?
+
     if typeof value == "boolean"
       return indexTypes.discrete
 
@@ -262,7 +266,7 @@ class RedisAdapter
           results.push obj
       callback err, results
 
-  scoreRange: (prop, conditions, callback) ->
+  scoreRange: (model, prop, conditions, callback) ->
     value = null
     self = this
     comparator = "eq"
@@ -272,7 +276,7 @@ class RedisAdapter
     else
       value = conditions[prop]
 
-    storage = self.storageFor value
+    storage = self.storageFor model, prop, value
     lowerScore = "-inf"
     upperScore = "+inf"
     if comparator == "ne"
@@ -316,7 +320,7 @@ class RedisAdapter
     else
       async.map Object.keys(conditions), (prop, next) ->
         #first, let's convert node-orm's conditions from a hash, to an array with redis scores
-        self.scoreRange prop, conditions, (err, storage, lowerScore, upperScore) ->
+        self.scoreRange table, prop, conditions, (err, storage, lowerScore, upperScore) ->
           return next(err) if err?
 
           if storage == indexTypes.discrete

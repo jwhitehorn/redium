@@ -19,6 +19,8 @@ describe 'Redis adapter find', ->
               total: 45.95
               order_date: new Date Date.parse "2014-01-10T04:30:00Z"
               sent_to_fullment: true
+              warehouse_code: 1
+              tracking_number: "Z001"
 
             models.Order.create order, (err) ->
               next err
@@ -29,6 +31,8 @@ describe 'Redis adapter find', ->
               total: 35.95
               order_date: new Date Date.parse "2014-01-12T04:30:00Z"
               sent_to_fullment: true
+              warehouse_code: 1
+              tracking_number: "Z002"
 
             models.Order.create order, (err) ->
               next err
@@ -39,6 +43,8 @@ describe 'Redis adapter find', ->
               total: 135.95
               order_date: new Date Date.parse "2014-01-15T04:30:00Z"
               sent_to_fullment: false
+              warehouse_code: 2
+              tracking_number: "Z003"
 
             models.Order.create order, (err) ->
               next err
@@ -506,3 +512,51 @@ describe 'Redis adapter find', ->
 
           close()
           done()
+
+
+  it 'discrete indexed properties are exempt from the hard limit', (done) ->
+    @timeout 60000
+
+    db.open (err, models, close) ->
+      async.times 11000, (n, next) ->
+        order =
+          shipping_address: "100 Main St."
+          total: 45.95
+          order_date: new Date Date.parse "2014-01-10T04:30:00Z"
+          sent_to_fullment: true
+          warehouse_code: 1
+
+        models.Order.create order, (err) ->
+          next err
+      , (err) ->
+        expect(err).to.not.exist
+
+        order =
+          shipping_address: "100 Main St."
+          total: 99.95
+          order_date: new Date Date.parse "2014-01-10T04:30:00Z"
+          sent_to_fullment: true
+          warehouse_code: 1
+        models.Order.create order, (err) ->
+          expect(err).to.not.exist
+
+          filter =
+            total: orm.gt 98
+            warehouse_code: 1
+
+          models.Order.find filter, (err, orders) ->
+            expect(err).to.not.exist
+            orders.length.should.equal 1
+
+            close()
+            done()
+
+  it 'should not be able to find models by index ignored properties', (done) ->
+    db.open (err, models, close) ->
+      expect(err).to.not.exist
+      models.Order.one tracking_number: "Z001", (err, order) ->
+        expect(err).to.not.exist
+        expect(order).to.not.exist
+
+        close()
+        done()
