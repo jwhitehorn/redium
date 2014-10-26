@@ -101,6 +101,8 @@ class RedisAdapter
     if typeHandler and "propertyToValue" of typeHandler
       return typeHandler.propertyToValue(value)
 
+    if property["type"] == "number" or property["type"] == "date"
+      return null if isNaN value
     return value
 
 
