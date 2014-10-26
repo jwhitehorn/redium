@@ -6,7 +6,7 @@ class Database
   @open: (callback) ->
     orm.addAdapter 'redis', redis.adapter
 
-    orm.connect 'redis://localhost:6380', (err, db)->
+    orm.connect 'redis://127.0.0.1:6379', (err, db)->
       return callback(err) if err?
       db.use redis.plugin
       db.defineType 'LowerCaseString',

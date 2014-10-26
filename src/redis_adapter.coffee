@@ -12,7 +12,7 @@ indexOptions = {}
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
-    @client = redis.createClient()
+    @client = redis.createClient(config.port, config.host, {})
     @customTypes = {}
     @blank = ->
       return
