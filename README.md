@@ -14,10 +14,10 @@ After that, you can start working with Redis by requiring this package and calli
 
 
 ```JavaScript
-var redis = require('node-orm2-redis');
+var redium = require('redium');
 
 //more code here
-orm.addAdapter('redis', redis.adapter);
+orm.addAdapter('redis', redium.adapter);
 orm.connect(connectionString, function(err, db){
   //stuff
 });
@@ -28,7 +28,7 @@ Additionally, it's recommended that you use the supplied plugin, as doing so wil
 ```JavaScript
 orm.connect(connectionString, function(err, db){
   //error check
-  db.use(redis.plugin);
+  db.use(redium.plugin);
 });
 ```
 
@@ -49,8 +49,8 @@ db.define("orders", {
   tracking_number: String
 }, {
   indexes: {
-    warehouse_code: redis.index.discrete,
-    tracking_number: redis.index.ignore
+    warehouse_code: redium.index.discrete,
+    tracking_number: redium.index.ignore
   }
 });
 ```
