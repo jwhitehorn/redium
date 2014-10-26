@@ -1,10 +1,10 @@
 {
-  "name": "node-orm2-redis",
+  "name": "Redium",
   "description": "Redis adapter for node-orm2",
   "version": "0.6.1",
   "author": "Jason Whitehorn",
   "license": "BSD",
-  "homepage": "https://github.com/jwhitehorn/node-orm2-redis",
+  "homepage": "https://github.com/jwhitehorn/redium",
   "scripts": {
     "build":        "coffee --bare --compile --output lib src/*.coffee && cp src/*.lua ./lib/",
     "prepublish":   "coffee --bare --compile --output lib src/*.coffee && cp src/*.lua ./lib/"
