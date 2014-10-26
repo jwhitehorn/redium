@@ -4,6 +4,8 @@ A Redis adapter for the [node-orm2](https://github.com/dresende/node-orm2) ORM.
 
 Redis + Node ~= Peanut Butter + Chocolate :blue_heart:
 
+[![NPM version](https://badge.fury.io/js/redium.svg)](http://badge.fury.io/js/redium)
+
 ## Usage
 
 Incorporating this Redis adapter into your project is pretty straight forward, provided you're already using node-orm2 today.
