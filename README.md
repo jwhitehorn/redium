@@ -74,7 +74,7 @@ Ideally you should not have to worry about the Redis keys generated and maintain
 #### Index keys
 * `{model}:{prop}` - a sorted set whose members are primary model keys.
 * `{model}:{prop}:sets` - if a property is discrete, the set will exist to document all the discrete sets for this property.
-* `{model}:{prop}-{value}` - for discrete sets, this set will exist for a given value containing primary model keys.
+* `{model}:{prop}-{score}` - for discrete sets, this set will exist for a given value containing primary model keys.
 
 ## Considerations
 
