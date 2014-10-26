@@ -1,5 +1,5 @@
 {
-  "name": "Redium",
+  "name": "redium",
   "description": "Redis adapter for node-orm2",
   "version": "0.6.1",
   "author": "Jason Whitehorn",
