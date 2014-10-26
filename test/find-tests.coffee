@@ -560,3 +560,15 @@ describe 'Redis adapter find', ->
 
         close()
         done()
+
+  it 'cannot query discrete properties with inequalities', (done) ->
+    db.open (err, models, close) ->
+      expect(err).to.not.exist
+      filter =
+        warehouse_code: orm.gte 1
+
+      models.Order.find filter, (err, orders) ->
+        expect(err).to.exist
+
+        close()
+        done()

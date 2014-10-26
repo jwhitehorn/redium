@@ -281,18 +281,23 @@ class RedisAdapter
     storage = self.storageFor model, prop, value
     lowerScore = "-inf"
     upperScore = "+inf"
+    inEquality = false
     if comparator == "ne"
       err = new Error "Unsupported operator"
       err.code = 4001
       return callback err
     else if comparator == "lt"
       upperScore = self.score(value) - 1
+      inEquality = true
     else if comparator == "lte"
       upperScore = self.score value
+      inEquality = true
     else if comparator == "gt"
       lowerScore = self.score(value) + 1
+      inEquality = true
     else if comparator == "gte"
       lowerScore = self.score value
+      inEquality = true
     else if comparator == "between"
       lowerScore = self.score(conditions[prop]["from"])
       upperScore = self.score(conditions[prop]["to"])
@@ -306,7 +311,11 @@ class RedisAdapter
       lowerScore = self.score value
       upperScore = lowerScore
 
-    callback null, storage, lowerScore, upperScore
+    if (inEquality or comparator is "between") and storage == indexTypes.discrete
+      err = new Error "Operator '#{comparator}' not supported for discrete property '#{prop}'"
+      err.code = 4002
+
+    callback err, storage, lowerScore, upperScore
 
 
   keysFor: (table, conditions, opts, callback) ->
