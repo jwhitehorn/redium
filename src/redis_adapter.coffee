@@ -182,10 +182,15 @@ class RedisAdapter
 
   clear: (table, callback) ->
     self = this
-    @client.keys "#{table}:*", (err, keys) ->
-      return callback(err) if callback? and (err? or keys == null or keys.length == 0)
-      self.client.del keys, (err) ->
-        callback(err) if callback?
+    callback = @blank unless callback?
+    allClients (err, commands, clients) ->
+      return callback err if err?
+      
+      async.each clients, (client, next) ->
+        client.keys "#{table}:*", (err, keys) ->
+          return callback(err) if callback? and (err? or keys == null or keys.length == 0)
+          self.client.del keys, next
+        , callback
 
   eagerQuery: (association, opts, ids, callback) ->
     callback() if callback?
@@ -339,6 +344,13 @@ class RedisAdapter
 
   clientFor: (model, data, conditions, callback) ->
     @configureClient @aClient, callback
+
+
+  allClients: (callback) ->
+    @configureClient @aClient, (err, commands, client) ->
+      return callback err if err?
+      callback null, [commands], [client]
+
 
   configureClient: (client, callback) ->
     self = this
