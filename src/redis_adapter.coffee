@@ -12,7 +12,7 @@ indexOptions = {}
 
 class RedisAdapter
   constructor: (config, connection, opts) ->
-    @client = redis.createClient(config.port, config.host, {})
+    @aClient = redis.createClient(config.port, config.host, {})
     @customTypes = {}
     @blank = ->
       return
@@ -27,62 +27,7 @@ class RedisAdapter
 
   #Establishes your database connection.
   connect: (callback) ->
-    self = this
-    rootPath = path.dirname(fs.realpathSync(__filename))
-    async.series [
-      (next) ->
-        return next() if commands.keysFor?
-        filename = path.join rootPath, "./keys_for.lua"
-        fs.readFile filename, 'utf8', (err, lua) ->
-          return callback?(err) if err?
-
-          self.client.script 'load', lua, (err, sha) ->
-            commands.keysFor = sha
-            next(err)
-
-      (next) ->
-        return next() if commands.mhgetAll?
-        filename = path.join rootPath, "./mhgetall.lua"
-        fs.readFile filename, 'utf8', (err, lua) ->
-          return callback?(err) if err?
-
-          self.client.script 'load', lua, (err, sha) ->
-            commands.mhgetAll = sha
-            next(err)
-
-      (next) ->
-        return next() if commands.createIndex?
-        filename = path.join rootPath, "./create_index.lua"
-        fs.readFile filename, 'utf8', (err, lua) ->
-          return callback?(err) if err?
-
-          self.client.script 'load', lua, (err, sha) ->
-            commands.createIndex = sha
-            next(err)
-
-      (next) ->
-        return next() if commands.updateIndex?
-        filename = path.join rootPath, "./update_index.lua"
-        fs.readFile filename, 'utf8', (err, lua) ->
-          return callback?(err) if err?
-
-          self.client.script 'load', lua, (err, sha) ->
-            commands.updateIndex = sha
-            next(err)
-
-      (next) ->
-        return next() if commands.delete?
-        filename = path.join rootPath, "./delete.lua"
-        fs.readFile filename, 'utf8', (err, lua) ->
-          return callback?(err) if err?
-
-          self.client.script 'load', lua, (err, sha) ->
-            commands.delete = sha
-            next(err)
-
-    ], (err) ->
-      alreadyConfiguredLua = true
-      callback(err) if callback?
+    callback() if callback?
 
   #Tests whether your connection is still alive.
   ping: (callback) ->
@@ -91,7 +36,7 @@ class RedisAdapter
 
   #Closes your database connection.
   close: (callback) ->
-    @client.quit() if @client?
+    #@client.quit() if @client?
     callback() if callback?
 
 
@@ -142,59 +87,75 @@ class RedisAdapter
     self.keysFor table, conditions, opts, (err, keys) ->
       return callback(err) if err?
 
-      self.mgetKeys keys, (err, results) ->
-        return callback(err) if err?
-        self.recheckConditionals results, conditions, callback
+      self.clientFor table, null, conditions, (err, commands, client) ->
+        args = [commands.mhgetAll, 0, keys.length].concat keys
 
+        client.evalsha args, (err, rawResults) ->
+          return callback(err) if err?
+          results = []
+          if rawResults?
+            for rawResult in rawResults
+              obj = {}
+              i = 0
+              while i isnt rawResult.length
+                obj[rawResult[i]] = rawResult[i+1]
+                i += 2
+              results.push obj
+          self.recheckConditionals results, conditions, callback
 
   insert: (table, data, id_prop, callback) ->
     self = this
     idName = id_prop[0]["name"]
     idValue = data[idName]
+    callback = @blank unless callback?
     unless idValue?
       idValue = uuid.v4()
       data[idName] = idValue
 
     key = "#{table}:id:#{idValue}"
-    self.client.hmset key, data, (err) ->
-      return callback(err) if err? and callback?
+    self.clientFor table, data, null, (err, commands, client) ->
+      return callback(err) if err?
+      client.hmset key, data, (err) ->
+        return callback(err) if err?
 
-      props = Object.keys(data)
-      args = [commands.createIndex, 0, props.length]
-      for prop in props
-        value = data[prop]
-        score = self.score value
-        storage = self.storageFor table, prop, value
-        args.push "#{table}:#{prop}"
-        args.push storage
-        args.push score
-        args.push key
+        props = Object.keys(data)
+        args = [commands.createIndex, 0, props.length]
+        for prop in props
+          value = data[prop]
+          score = self.score value
+          storage = self.storageFor table, prop, value
+          args.push "#{table}:#{prop}"
+          args.push storage
+          args.push score
+          args.push key
 
-      self.client.evalsha args, (err) ->
-        callback(err, idName: idValue) if callback?
+        client.evalsha args, (err) ->
+          callback(err, idName: idValue)
 
   update: (table, changes, conditions, callback) ->
     self = this
     callback = self.blank unless callback?
     id = conditions["id"]
 
-    props = Object.keys changes
+    self.clientFor table, changes, conditions, (err, commands, client) ->
 
-    key = "#{table}:id:#{id}"
-    args = [commands.updateIndex, 0, props.length]
-    for prop in props
-      value = changes[prop]
-      score = self.score value
-      storage = self.storageFor table, prop, value
-      args.push "#{table}:#{prop}"
-      args.push prop
-      args.push storage
-      args.push score
-      args.push value
-      args.push key
+      props = Object.keys changes
 
-    self.client.evalsha args, (err) ->
-      callback err
+      key = "#{table}:id:#{id}"
+      args = [commands.updateIndex, 0, props.length]
+      for prop in props
+        value = changes[prop]
+        score = self.score value
+        storage = self.storageFor table, prop, value
+        args.push "#{table}:#{prop}"
+        args.push prop
+        args.push storage
+        args.push score
+        args.push value
+        args.push key
+
+      client.evalsha args, (err) ->
+        callback err
 
   remove: (table, conditions, callback) ->
     self = this
@@ -203,10 +164,12 @@ class RedisAdapter
     self.keysFor table, conditions, {}, (err, keys) ->
       return callback(err) if err?
 
-      async.eachSeries keys, (key, next) ->
-        args = [commands.delete, 0, table, key]
-        self.client.evalsha args, next
-      , callback
+      self.clientFor table, null, conditions, (err, commands, client) ->
+
+        async.eachSeries keys, (key, next) ->
+          args = [commands.delete, 0, table, key]
+          client.evalsha args, next
+        , callback
 
   count: (table, conditions, opts, callback) ->
     callback(null, []) unless callback?
@@ -252,21 +215,6 @@ class RedisAdapter
 
     return indexTypes.series
 
-  mgetKeys: (keys, callback) ->
-    self = this
-    args = [commands.mhgetAll, 0, keys.length].concat keys
-
-    self.client.evalsha args, (err, rawResults) ->
-      results = []
-      if rawResults?
-        for rawResult in rawResults
-          obj = {}
-          i = 0
-          while i isnt rawResult.length
-            obj[rawResult[i]] = rawResult[i+1]
-            i += 2
-          results.push obj
-      callback err, results
 
   scoreRange: (model, prop, conditions, callback) ->
     value = null
@@ -323,8 +271,16 @@ class RedisAdapter
     offset = opts.offset if typeof opts.offset == "number"
     self = this
     if conditions == null or Object.keys(conditions).length == 0
-      self.performZRangeByScore "#{table}:id", "-inf", "inf", limit, offset, (err, keys) ->
+      args = ["#{table}:id", "-inf", "inf"]
+      if limit? or offset?
+        args.push "LIMIT"
+        args.push offset if offset?
+        args.push 0 unless offset?
+        args.push limit if limit?
+      args.push (err, keys) ->
         callback err, keys
+      self.clientFor table, null, conditions, (err, commands, client) ->
+        client.zrangebyscore.apply client, args
     else if conditions["id"]?
       idValue = conditions["id"]
       callback null, ["#{table}:id:#{idValue}"]
@@ -346,28 +302,17 @@ class RedisAdapter
       , (err, conditions) ->
         return callback(err) if err?
         #now that we have an array we can pass to redis, let's call our Lua function
-        queryId = uuid.v4()
-        offset = 0 unless offset?
-        limit = 999999 unless limit?
-        args = [commands.keysFor, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
-        self.client.evalsha args, (err, keys) ->
-          if keys == "ERROR"
-            err = new Error "Query too large"
-            err.code = 4000
-            return callback err
-          callback err, keys
-
-
-  performZRangeByScore: (key, min, max, limit, offset, callback) ->
-    args = [key, min, max]
-    if limit? or offset?
-      args.push "LIMIT"
-      args.push offset if offset?
-      args.push 0 unless offset?
-      args.push limit if limit?
-    args.push callback
-    @client.zrangebyscore.apply @client, args
-
+        self.clientFor table, null, conditions, (err, commands, client) ->
+          queryId = uuid.v4()
+          offset = 0 unless offset?
+          limit = 999999 unless limit?
+          args = [commands.keysFor, 0, queryId, limit, offset, conditions.length].concat _.flatten(conditions)
+          client.evalsha args, (err, keys) ->
+            if keys == "ERROR"
+              err = new Error "Query too large"
+              err.code = 4000
+              return callback err
+            callback err, keys
 
   recheckConditionals: (results, conditions, callback) ->
     self = this
@@ -390,5 +335,69 @@ class RedisAdapter
       next keep
     , (results) ->
       callback null, results
+
+
+  clientFor: (model, data, conditions, callback) ->
+    @configureClient @aClient, callback
+
+  configureClient: (client, callback) ->
+    self = this
+    #commands = {}
+    rootPath = path.dirname(fs.realpathSync(__filename))
+    async.series [
+      (next) ->
+        return next() if commands.keysFor?
+        filename = path.join rootPath, "./keys_for.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          client.script 'load', lua, (err, sha) ->
+            commands.keysFor = sha
+            next(err)
+
+      (next) ->
+        return next() if commands.mhgetAll?
+        filename = path.join rootPath, "./mhgetall.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          client.script 'load', lua, (err, sha) ->
+            commands.mhgetAll = sha
+            next(err)
+
+      (next) ->
+        return next() if commands.createIndex?
+        filename = path.join rootPath, "./create_index.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          client.script 'load', lua, (err, sha) ->
+            commands.createIndex = sha
+            next(err)
+
+      (next) ->
+        return next() if commands.updateIndex?
+        filename = path.join rootPath, "./update_index.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          client.script 'load', lua, (err, sha) ->
+            commands.updateIndex = sha
+            next(err)
+
+      (next) ->
+        return next() if commands.delete?
+        filename = path.join rootPath, "./delete.lua"
+        fs.readFile filename, 'utf8', (err, lua) ->
+          return callback?(err) if err?
+
+          client.script 'load', lua, (err, sha) ->
+            commands.delete = sha
+            next(err)
+
+    ], (err) ->
+      alreadyConfiguredLua = true
+      callback err, commands, client
+
 
 module.exports = RedisAdapter
